@@ -1,51 +1,29 @@
 #' Checks for the prediction methods
 #'
-#' It contains all the check functions in the package.
-#' All the arguments are identical to the inputs of conformal.split.multi in the file
-#' split.multi.R.
+#' Contains all the check functions used internally in the package.
+#' All arguments match those of \code{\link{conformal.multidim.split}} in `split.multi.R`.
 #'
-#' @param x The feature variables, a matrix n x p.
-#' @param y The matrix of multivariate responses (dimension n x q)
-#' @param x0 The new points to evaluate, a matrix of dimension n0 x p.
-#' @param train.fun A function to perform model training, i.e., to produce an
-#'   estimator of E(Y|X), the conditional expectation of the response variable
-#'   Y given features X. Its input arguments should be x: matrix of features,
-#'   and y: matrix of responses.
-#' @param predict.fun A function to perform prediction for the (mean of the)
-#'   responses at new feature values. Its input arguments should be out: output
-#'   produced by train.fun, and newx: feature values at which we want to make
-#'   predictions.
-#' @param alpha Miscoverage level for the prediction intervals, i.e., intervals
-#'   with coverage 1-alpha are formed. Default for alpha is 0.1.
-#' @param seed Integer to be passed to set.seed before defining the random
-#'   data-split to be used. Default is FALSE, which effectively sets no seed.
-#'   If both split and seed are passed, the former takes priority and the latter
-#'   is ignored.
-#' @param randomized Should the randomized approach be used? Default is FALSE.
-#' @param seed.tau The seed for the randomized version. Default is FALSE.
-#' @param training_size Split proportion between training and calibration set.
-#' Default is 0.5.
-#' @param score The non-conformity measure. It can either be "max", "l2", "mahalanobis".
-#' The default is "l2".
-#' @param mad.train.fun A function to perform training on the absolute residuals
-#'   i.e., to produce an estimator of E(R|X) where R is the absolute residual
-#'   R = |Y - m(X)|, and m denotes the estimator produced by train.fun.
-#'   This is used to scale the conformal score, to produce a prediction interval
-#'   with varying local width. The input arguments to mad.train.fun should be
-#'   x: matrix of features, y: vector of absolute residuals, and out: the output
-#'   produced by a previous call to mad.train.fun, at the \emph{same} features
-#'   x. The function mad.train.fun may (optionally) leverage this returned
-#'   output for efficiency purposes. See details below. The default for
-#'   mad.train.fun is NULL, which means that no training is done on the absolute
-#'   residuals, and the usual (unscaled) conformal score is used. Note that if
-#'   mad.train.fun is non-NULL, then so must be mad.predict.fun (next).
-#' @param mad.predict.fun A function to perform prediction for the (mean of the)
-#'   absolute residuals at new feature values. Its input arguments should be
-#'   out: output produced by mad.train.fun, and newx: feature values at which we
-#'   want to make predictions. The default for mad.predict.fun is NULL, which
-#'   means that no local scaling is done for the conformal score, i.e., the
-#'   usual (unscaled) conformal score is used.
+#' @param x Feature matrix of dimension n x p.
+#' @param y Response matrix of dimension n x q.
+#' @param x0 New feature points to evaluate, matrix of dimension n0 x p.
+#' @param train.fun Function to train the model, producing an estimator of E(Y|X).
+#'   Input arguments: x (features), y (responses).
+#' @param predict.fun Function to predict responses at new feature values.
+#'   Input arguments: out (output from train.fun), newx (new features).
+#' @param alpha Miscoverage level for prediction intervals (coverage = 1 - alpha). Default 0.1.
+#' @param seed Integer seed for random split. Default FALSE (no seed). Ignored if split is provided.
+#' @param randomized Logical. Should the randomized approach be used? Default FALSE.
+#' @param seed.tau Seed for the randomized version. Default FALSE.
+#' @param training_size Proportion of data used for training vs calibration. Default 0.5.
+#' @param score Nonconformity measure: "max", "l2", or "mahalanobis". Default "l2".
+#' @param mad.train.fun Optional function to train on absolute residuals (E(R|X)), where
+#'   R = |Y - m(X)| and m is the estimator from train.fun. Overrides s_type if provided.
+#'   Input arguments: x (features), y (absolute residuals), out (previous output). Default NULL.
+#' @param mad.predict.fun Optional function to predict mean absolute residuals at new features.
+#'   Input arguments: out (output from mad.train.fun), newx (features). Default NULL.
+#'
 #' @noRd
+
 
 check.split=function(x,y,x0,train.fun,
                predict.fun, alpha, seed, training_size, seed.tau, randomized,mad.train.fun=NULL, mad.predict.fun=NULL, score){
@@ -105,6 +83,9 @@ check.split=function(x,y,x0,train.fun,
 
   check.num.01(training_size)
 
+
+  if (is.null(seed.tau)==TRUE || (seed.tau!=FALSE & is.numeric(seed.tau)==FALSE))
+    stop("Argument 'seed_tau' must be either FALSE or an integer.")
 
   if (is.null(randomized)==TRUE || randomized %in% c("TRUE","FALSE")==FALSE)
     stop("Argument 'randomized' must be either TRUE or FALSE")

@@ -2,6 +2,7 @@
 
 export(computing_s_regression)
 export(conformal.multidim.full)
+export(conformal.multidim.jackplus)
 export(conformal.multidim.msplit)
 export(conformal.multidim.split)
 export(elastic.funs)

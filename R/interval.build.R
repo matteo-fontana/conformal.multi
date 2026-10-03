@@ -1,12 +1,20 @@
-#' BUILDING THE MULTISPLIT INTERVAL FOR EACH X0, BY COMBINING MULTIPLE
-#' SPLIT WITH MULTISPLIT ALGORITHM
+#' Build Multi-Split Interval for Each X0
 #'
+#' Constructs a multi-split prediction interval for each new point X0 by combining
+#' results from multiple split conformal predictions using the multi-split algorithm.
 #'
-#' @param yyy column vector of B lower bounds and B upper bounds
-#' @param B number of replications
-#' @param tr truncation threshold for the algorithm
+#' @param yyy Column vector containing B lower bounds and B upper bounds.
+#' @param B Number of replications used in the multi-split procedure.
+#' @param tr Truncation threshold for the algorithm.
+#'
+#' @return A vector with the lower and upper end of the convex hull of the set
+#'   of values contained in more than tr of the B intervals. If the set is
+#'   empty, c(NA, NA) is returned.
+#'
 #' @importFrom utils flush.console
 #' @noRd
+
+
 
 
 interval.build=function(yyy,B,tr){
@@ -21,25 +29,24 @@ interval.build=function(yyy,B,tr){
   hs <- h[o]
 
   count <- 0
-  leftend <- 0
-  lo<-up<-0
+  lo <- up <- NA
 
 
   for (j in 1:(2*B) ){
     if ( hs[j]==1 ) {
       count <- count + 1
 
-      if ( count > tr && (count - 1) <= tr) {
-        leftend <- ys[j]
+      # first value at which the count exceeds the threshold
+      if ( count > tr && (count - 1) <= tr && is.na(lo)) {
+        lo <- ys[j]
       }
 
     }
 
     else {
+      # last value at which the count drops below the threshold
       if ( count > tr && (count - 1) <= tr) {
-        rightend <- ys[j]
-        lo <- leftend
-        up <- rightend
+        up <- ys[j]
       }
 
       count <- count - 1

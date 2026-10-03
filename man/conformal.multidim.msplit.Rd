@@ -21,102 +21,122 @@ conformal.multidim.msplit(
   s_type = "st-dev",
   B = 100,
   lambda = 0,
-  tau = 1 - (B + 1)/(2 * B)
+  tau = NULL,
+  aggregation = c("componentwise", "depth"),
+  mad.train.fun = NULL,
+  mad.predict.fun = NULL
 )
 }
 \arguments{
-\item{x}{The feature variables, a matrix nxp.}
+\item{x}{Feature matrix of dimension n x p.}
 
-\item{y}{The matrix of multivariate responses (dimension nxq)}
+\item{y}{Response matrix of dimension n x q.}
 
-\item{x0}{The new points to evaluate, a matrix of dimension n0xp.}
+\item{x0}{New points to evaluate, matrix of dimension n0 x p.}
 
-\item{train.fun}{A function to perform model training, i.e., to produce an
-estimator of E(Y|X), the conditional expectation of the response variable
-Y given features X. Its input arguments should be x: matrix of features,
-and y: matrix of responses.}
+\item{train.fun}{Function to perform model training, producing an estimator of E(Y|X).
+Input arguments: x (features), y (responses).}
 
-\item{predict.fun}{A function to perform prediction for the (mean of the)
-responses at new feature values. Its input arguments should be out: output
-produced by train.fun, and newx: feature values at which we want to make
-predictions.}
+\item{predict.fun}{Function to predict responses at new feature values.
+Input arguments: out (output from train.fun), newx (new features).}
 
-\item{alpha}{Miscoverage level for the prediction intervals, i.e., intervals
-with coverage 1-alpha are formed. Default for alpha is 0.1.}
+\item{alpha}{Miscoverage level for prediction intervals. Default 0.1.}
 
-\item{split}{Indices that define the data-split to be used (i.e., the indices
-define the first half of the data-split, on which the model is trained).
-Default is NULL, in which case the split is chosen randomly.}
+\item{split}{Indices defining the training split. Default NULL (random split).}
 
-\item{seed}{Integer to be passed to set.seed before defining the random
-data-split to be used. Default is FALSE, which effectively sets no seed.
-If both split and seed are passed, the former takes priority and the latter
-is ignored.}
+\item{seed}{Integer seed for the random splits: the b-th split uses the seed
+seed + b. Default FALSE, in which case the B seeds are drawn from the
+current random number stream, so that set.seed() makes the result
+reproducible. Ignored if split is provided.}
 
-\item{randomized}{Should the randomized approach be used? Default is FALSE.}
+\item{randomized}{Logical, whether to use the randomized approach. Default FALSE.}
 
-\item{seed_beta}{The seed for the randomized version. Default is FALSE.}
+\item{seed_beta}{Seed for the randomized version. Default FALSE.}
 
-\item{verbose}{Should intermediate progress be printed out? Default is FALSE.}
+\item{verbose}{Logical, print progress? Default FALSE.}
 
-\item{training_size}{Split proportion between training and calibration set.
-Default is 0.5.}
+\item{training_size}{Proportion of data used for training: a number, used
+for every split, or a vector of length B. Default NULL, i.e. 0.5 for every
+split.}
 
-\item{score}{The chosen score for the split conformal function.}
+\item{score}{Nonconformity measure to use for the split conformal function.}
 
-\item{s_type}{The type of modulation function.
-Currently we have 3 options: "identity","st-dev","alpha-max". Default is "std-dev"}
+\item{s_type}{Type of modulation function: "identity", "st-dev", or "alpha-max". Default "st-dev".}
 
-\item{B}{Number of repetitions. Default is 100.}
+\item{B}{Number of repetitions. Default 100.}
 
-\item{lambda}{Smoothing parameter. Default is 0.}
+\item{lambda}{Smoothing parameter. Default 0.}
 
-\item{tau}{It is a smoothing parameter:
-tau=1-1/B  Bonferroni intersection method
-tau=0 unadjusted intersection
-Default is 1-(B+1)/(2*B).}
+\item{tau}{Parameter of the multi split procedure. Each split conformal
+region is computed at miscoverage level alpha*(1-tau+lambda/B). With
+aggregation = "componentwise", a value is retained in the final interval of
+a component when it is contained in more than tau*B of the B split
+intervals of that component:
+\describe{
+  \item{tau = 1 - 1/B}{Bonferroni intersection method.}
+  \item{tau = 0}{Union of the B intervals, each at level alpha.}
+}
+With aggregation = "depth", the floor(2*tau*B) deepest of the 2B vertices
+are retained (at least two are required). Default NULL, i.e.
+1 - (B + 1)/(2 * B) for "componentwise" and 0.1 for "depth".}
+
+\item{aggregation}{How the B split conformal regions are combined, either
+"componentwise" (default) or "depth". See details.}
+
+\item{mad.train.fun, mad.predict.fun}{Optional functions for local scaling of
+the residuals, passed to \code{\link{conformal.multidim.split}}. Default NULL.}
 }
 \value{
-A list with the following components x0, lo, up. In particular lo and up
-are matrices of dimension n0 x q.
+A list with components x0, lo, and up. lo and up are matrices of dimension n0 x q.
 }
 \description{
-Compute prediction intervals using Multi Split conformal inference with
+Compute prediction intervals using Multi Split conformal inference for a
 multivariate response.
 }
 \details{
-The work is an extension of the univariate approach to Multi Split
-conformal inference to a multivariate context.
-
-This function is based on the package \code{\link{future.apply}} to
- perform parallelization.
+This function extends the univariate Multi Split conformal approach to the multivariate case.
+  The split conformal method is run B times, each run returning an
+  axis-aligned box with lower vertex lo^b and upper vertex up^b.
+  With aggregation = "componentwise" the univariate multi split procedure of
+  Solari and Djordjilovic (2022) is applied to each component separately.
+  The resulting box contains every y that belongs to more than tau*B of the
+  B regions, so that its coverage is at least 1-alpha provided that
+  lambda <= tau*B - floor(tau*B), in particular for lambda = 0 (Markov's
+  inequality, as in Solari and Djordjilovic, 2022). If, for a component,
+  the set of retained values is not an interval, its convex hull is returned.
+  With aggregation = "depth" the 2B vertices lo^b, up^b are ranked according
+  to the depth -max_j |z_j|, where z is the vertex standardised
+  component-wise, the floor(2*tau*B) deepest vertices are retained and their
+  bounding box is returned. The latter is a heuristic: no finite sample
+  coverage guarantee is available for it, and its coverage can be below
+  1-alpha.
+  Parallelization is performed via the \code{\link[future.apply]{future_sapply}} function.
 }
 \examples{
-
-n = 33
+n = 50
 n0 = 2
 p = 2
 mu = rep(0,p)
 x = mvtnorm::rmvnorm(n, mu)
 my_grid <- seq(from=0,to=1,length.out=2)
-y = t(apply(x,1,function(u) u[1] + u[2]*cos(6*pi*my_grid)))
+y = t(apply(x,1,function(u) u[1] + u[2]*cos(6*pi*my_grid))) +
+  mvtnorm::rmvnorm(n, rep(0,2))
 x0 = mvtnorm::rmvnorm(n0, mu)
-fun=mean_multi()
-#fun=lm_multi()
+fun=lm_multi()
 
-B=3
+B=10
 
 final.multi=conformal.multidim.msplit(x=x,y=y, x0=x0,
                                       fun$train.fun, fun$predict.fun,
-                       alpha=0.1,
-                       split=NULL, seed=FALSE, randomized=FALSE,seed_beta=FALSE,
-                       verbose=FALSE, training_size=NULL,s_type="st-dev",B=B,lambda=0,
-                       score="l2")
+                       alpha=0.1, seed=1, training_size=0.5, s_type="st-dev",
+                       B=B, lambda=0, score="l2")
 
-
-
+final.depth=conformal.multidim.msplit(x=x,y=y, x0=x0,
+                                      fun$train.fun, fun$predict.fun,
+                                      alpha=0.1, seed=1, B=B, tau=0.2,
+                                      aggregation="depth")
 }
 \references{
-"Multi Split Conformal Prediction" by Solari, Djordjilovic (2021) is
-the baseline for the univariate case.
+Solari, Djordjilovic (2022), "Multi Split Conformal Prediction",
+  Statistics and Probability Letters 184, 109395 (baseline for univariate case).
 }

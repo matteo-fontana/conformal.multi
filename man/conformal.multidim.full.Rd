@@ -13,10 +13,11 @@ conformal.multidim.full(
   alpha = 0.1,
   mad.train.fun = NULL,
   mad.predict.fun = NULL,
-  score = c("l2", "mahalanobis", "max", "scaled.max"),
+  score = c("l2", "mahalanobis", "max"),
   num.grid.pts.dim = 100,
   grid.factor = 1.25,
-  verbose = FALSE
+  verbose = FALSE,
+  s_type = c("st-dev", "identity")
 )
 }
 \arguments{
@@ -30,10 +31,8 @@ form a prediction interval, of dimension (say) n0 x p.}
 \item{train.fun}{A function to perform model training, i.e., to produce an
 estimator of E(Y|X), the conditional expectation of the response variable
 Y given features X. Its input arguments should be x: matrix of features,
-y: vector of responses, and out: the output produced by a previous call
-to train.fun, at the \emph{same} features x. The function train.fun may
-(optionally) leverage this returned output for efficiency purposes. See
-details below.}
+and y: matrix of responses. The model is fitted from scratch for each
+trial value.}
 
 \item{predict.fun}{A function to perform prediction for the (mean of the)
 responses at new feature values. Its input arguments should be out: output
@@ -46,15 +45,13 @@ with coverage 1-alpha are formed. Default for alpha is 0.1.}
 \item{mad.train.fun}{A function to perform training on the absolute residuals
 i.e., to produce an estimator of E(R|X) where R is the absolute residual
 R = |Y - m(X)|, and m denotes the estimator produced by train.fun.
-This is used to scale the conformal score, to produce a prediction interval
+This is used to scale the conformal score, to produce a prediction region
 with varying local width. The input arguments to mad.train.fun should be
-x: matrix of features, y: vector of absolute residuals, and out: the output
-produced by a previous call to mad.train.fun, at the \emph{same} features
-x. The function mad.train.fun may (optionally) leverage this returned
-output for efficiency purposes. See details below. The default for
+x: matrix of features and y: matrix of absolute residuals. The default for
 mad.train.fun is NULL, which means that no training is done on the absolute
-residuals, and the usual (unscaled) conformal score is used. Note that if
-mad.train.fun is non-NULL, then so must be mad.predict.fun (next).}
+residuals, and the residuals are scaled only by the modulation function
+selected by s_type. Note that if mad.train.fun is non-NULL, then so must be
+mad.predict.fun (next), which must return positive values.}
 
 \item{mad.predict.fun}{A function to perform prediction for the (mean of the)
 absolute residuals at new feature values. Its input arguments should be
@@ -64,8 +61,9 @@ means that no local scaling is done for the conformal score, i.e., the
 usual (unscaled) conformal score is used.}
 
 \item{score}{Method to compute nonconformity measure in the multivariate regime.
-The user can choose between squared l^2 norm of the residual,
-mahalanobis depth of the residual, the max norm of the residual, or a scaled max}
+The user can choose between the l^2 norm of the residual ("l2", default),
+the Mahalanobis distance of the residual ("mahalanobis") and the max norm of
+the residual ("max").}
 
 \item{num.grid.pts.dim}{Number of grid points per dimension used when forming the conformal
 intervals (each num.grid.pts.dim^q points is a trial point). Default is
@@ -73,12 +71,18 @@ intervals (each num.grid.pts.dim^q points is a trial point). Default is
 
 \item{grid.factor}{Expansion factor used to define the grid for the conformal
 intervals, i.e., the grid points are taken to be equally spaced in between
--grid.factor*max(abs(y)) and grid.factor*max(abs(y)). Default is 1.25. In
-this case (and with exchangeable data, thus unity weights) the restriction
-of the trial values to this range costs at most 1/(n+1) in coverage. See
-details below.}
+-grid.factor*max(abs(y[,k])) and grid.factor*max(abs(y[,k])) in each
+dimension k. Default is 1.25. In this case (and with exchangeable data)
+the restriction of the trial values to this range costs at most q/(n+1)
+in coverage. See details below.}
 
 \item{verbose}{Should intermediate progress be printed out? Default is FALSE.}
+
+\item{s_type}{The type of modulation function applied to the residuals before
+computing the score: "st-dev" (default), where each component is divided by
+its standard deviation, or "identity" (no scaling). The modulation is
+computed on the augmented data set, at each trial value. It is ignored when
+the mad functions are provided.}
 }
 \value{
 A list with the following components: pred, valid_points. The first
@@ -94,18 +98,23 @@ response
 \details{
 Due to eventual computational overload the function is restricted to a bivariate y.
 
-This function is based on the package \code{\link{future.apply}} to
- perform parallelization.
+This function is based on the package \code{\link[future.apply]{future.apply}}
+ to perform parallelization.
 
 If the data (training and test) are assumed to be exchangeable, the basic
-  assumption underlying conformal prediction, then the probability that a new
-  response value will lie outside of (-max(abs(y)), max(abs(y))), where y is
-  the vector of training responses, is 1/(n+1).  Thus the restriction of the
-  trials values to (-grid.factor*max(abs(y)), grid.factor*max(abs(y))), for
-  all choices grid.factor >= 1, will lead to a loss in coverage of at most
-  1/(n+1). This was also noted in "Trimmed Conformal Prediction for
-  High-Dimensional Models" by Chen, Wang, Ha, Barber (2016) (who use this
-  basic fact as motivation for proposing more refined trimming methods).
+  assumption underlying conformal prediction, then the probability that the
+  k-th component of a new response lies outside of
+  (-max(abs(y[,k])), max(abs(y[,k]))) is at most 1/(n+1). Thus the
+  restriction of the trial values to the box with sides
+  (-grid.factor*max(abs(y[,k])), grid.factor*max(abs(y[,k]))), for
+  grid.factor >= 1, leads to a loss in coverage of at most q/(n+1) (union
+  bound). For q = 1 this was noted in "Trimmed Conformal Prediction for
+  High-Dimensional Models" by Chen, Wang, Ha, Barber (2016). The prediction
+  region is returned as the finite set of trial values with p-value larger
+  than alpha.
+
+If the two mad functions are provided they take precedence over the
+  s_type parameter.
 }
 \examples{
 

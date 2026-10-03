@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.full.R
 \name{plot_multidim_full}
 \alias{plot_multidim_full}
-\title{Plot Confidence Regions obtained from Full Conformal}
+\title{Plot Prediction Regions obtained from Full Conformal}
 \usage{
 plot_multidim_full(full)
 }
@@ -10,13 +10,17 @@ plot_multidim_full(full)
 \item{full}{It's the output of the multivariate full conformal prediction function}
 }
 \value{
-A list of ggplots (output[[i]] is the i-th observation confidence region).
+A list of ggplots (output[[i]] is the i-th observation prediction region).
+  Each plot displays the trial values retained in the prediction region,
+  coloured according to their conformal p-value, and the point prediction.
+  For a univariate response, the p-values of the retained trial values are
+  plotted against the trial values.
 }
 \description{
-Plot Confidence Regions obtained from Full Conformal
+Plot Prediction Regions obtained from Full Conformal
 }
 \details{
-It exploits the package \code{\link{ggplot2}} and \code{\link{hrbrthemes}}
+It exploits the package \code{\link[ggplot2]{ggplot2}}
 to better visualize the results.
 }
 \examples{

@@ -72,20 +72,20 @@ i.e., to produce an estimator of E(R|X) where R is the absolute residual
 R = |Y - m(X)|, and m denotes the estimator produced by train.fun.
 This is used to scale the conformal score, to produce a prediction interval
 with varying local width. The input arguments to mad.train.fun should be
-x: matrix of features, y: vector of absolute residuals, and out: the output
+x: matrix of features, y: matrix of absolute residuals, and out: the output
 produced by a previous call to mad.train.fun, at the \emph{same} features
 x. The function mad.train.fun may (optionally) leverage this returned
-output for efficiency purposes. See details below. The default for
-mad.train.fun is NULL, which means that no training is done on the absolute
-residuals, and the usual (unscaled) conformal score is used. Note that if
-mad.train.fun is non-NULL, then so must be mad.predict.fun (next).}
+output for efficiency purposes. The default for mad.train.fun is NULL,
+which means that no locally weighted scaling is done: the residuals are
+then scaled only by the modulation function selected by s_type. Note that
+if mad.train.fun is non-NULL, then so must be mad.predict.fun (next).}
 
 \item{mad.predict.fun}{A function to perform prediction for the (mean of the)
 absolute residuals at new feature values. Its input arguments should be
 out: output produced by mad.train.fun, and newx: feature values at which we
-want to make predictions. The default for mad.predict.fun is NULL, which
-means that no local scaling is done for the conformal score, i.e., the
-usual (unscaled) conformal score is used.}
+want to make predictions. Its values must be positive (their absolute
+value is used). The default for mad.predict.fun is NULL, which means that
+no locally weighted scaling is done.}
 }
 \value{
 A list with the following components: x0,pred,k_s,s_type,s,alpha,randomized,tau,
@@ -99,8 +99,22 @@ Compute prediction intervals using split conformal inference with multivariate
 response.
 }
 \details{
+The residuals of the calibration set are divided component-wise by
+  the modulation function s (computed on the training set) and summarised by
+  the chosen score: the max norm ("max"), the Euclidean norm ("l2") or the
+  Mahalanobis norm with respect to the covariance matrix of the scaled
+  training residuals ("mahalanobis"). k_s is the empirical quantile of the
+  calibration scores. The prediction region is the set of y whose score does
+  not exceed k_s; lo and up are the bounds of its smallest axis-aligned
+  bounding box, i.e. pred -/+ k_s*s for "max" and "l2", and
+  pred -/+ k_s*s*sqrt(diag(Sigma)) for "mahalanobis".
+
 If the two mad functions are provided they take precedence over the s_type parameter,
 and they force a local scoring via the mad function predicted values.
+
+In the randomized version, if ceiling(l + tau - (l+1)*alpha) > l the
+  prediction region is the whole space and lo, up are set to -Inf, Inf (with
+  a warning).
 }
 \examples{
 
@@ -133,7 +147,7 @@ ppp2<-plot_multidim(final.point)
 }
 \references{
 The s_regression and the "max" score are taken from "Conformal Prediction Bands
-for Multivariate Functional Data" by Diquigiovanni, Fontana, Vantini (2021).
+for Multivariate Functional Data" by Diquigiovanni, Fontana, Vantini (2022).
 }
 \seealso{
 \code{\link{conformal.multidim.full}}
