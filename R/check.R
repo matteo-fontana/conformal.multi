@@ -84,6 +84,9 @@ check.split=function(x,y,x0,train.fun,
   check.num.01(training_size)
 
 
+  if (is.null(seed.tau)==TRUE || (seed.tau!=FALSE & is.numeric(seed.tau)==FALSE))
+    stop("Argument 'seed_tau' must be either FALSE or an integer.")
+
   if (is.null(randomized)==TRUE || randomized %in% c("TRUE","FALSE")==FALSE)
     stop("Argument 'randomized' must be either TRUE or FALSE")
 

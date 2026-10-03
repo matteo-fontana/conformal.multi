@@ -44,7 +44,10 @@ Input arguments: out (output from train.fun), newx (new features).}
 
 \item{split}{Indices defining the training split. Default NULL (random split).}
 
-\item{seed}{Integer seed for random split. Ignored if split is provided. Default FALSE.}
+\item{seed}{Integer seed for the random splits: the b-th split uses the seed
+seed + b. Default FALSE, in which case the B seeds are drawn from the
+current random number stream, so that set.seed() makes the result
+reproducible. Ignored if split is provided.}
 
 \item{randomized}{Logical, whether to use the randomized approach. Default FALSE.}
 
@@ -52,8 +55,9 @@ Input arguments: out (output from train.fun), newx (new features).}
 
 \item{verbose}{Logical, print progress? Default FALSE.}
 
-\item{training_size}{Vector of length B with the proportion of data used for
-training in each split. Default NULL, i.e. 0.5 for every split.}
+\item{training_size}{Proportion of data used for training: a number, used
+for every split, or a vector of length B. Default NULL, i.e. 0.5 for every
+split.}
 
 \item{score}{Nonconformity measure to use for the split conformal function.}
 
@@ -70,11 +74,11 @@ a component when it is contained in more than tau*B of the B split
 intervals of that component:
 \describe{
   \item{tau = 1 - 1/B}{Bonferroni intersection method.}
-  \item{tau = 0}{Unadjusted intersection.}
+  \item{tau = 0}{Union of the B intervals, each at level alpha.}
 }
 With aggregation = "depth", the floor(2*tau*B) deepest of the 2B vertices
-are retained. Default NULL, i.e. 1 - (B + 1)/(2 * B) for "componentwise"
-and 0.1 for "depth".}
+are retained (at least two are required). Default NULL, i.e.
+1 - (B + 1)/(2 * B) for "componentwise" and 0.1 for "depth".}
 
 \item{aggregation}{How the B split conformal regions are combined, either
 "componentwise" (default) or "depth". See details.}
@@ -96,43 +100,41 @@ This function extends the univariate Multi Split conformal approach to the multi
   With aggregation = "componentwise" the univariate multi split procedure of
   Solari and Djordjilovic (2022) is applied to each component separately.
   The resulting box contains every y that belongs to more than tau*B of the
-  B regions, so that its coverage is at least 1-alpha. If, for a component,
+  B regions, so that its coverage is at least 1-alpha provided that
+  lambda <= tau*B - floor(tau*B), in particular for lambda = 0 (Markov's
+  inequality, as in Solari and Djordjilovic, 2022). If, for a component,
   the set of retained values is not an interval, its convex hull is returned.
   With aggregation = "depth" the 2B vertices lo^b, up^b are ranked according
   to the depth -max_j |z_j|, where z is the vertex standardised
   component-wise, the floor(2*tau*B) deepest vertices are retained and their
   bounding box is returned. The latter is a heuristic: no finite sample
-  coverage guarantee is available for it.
+  coverage guarantee is available for it, and its coverage can be below
+  1-alpha.
   Parallelization is performed via the \code{\link[future.apply]{future_sapply}} function.
 }
 \examples{
-
-n = 33
+n = 50
 n0 = 2
 p = 2
 mu = rep(0,p)
 x = mvtnorm::rmvnorm(n, mu)
 my_grid <- seq(from=0,to=1,length.out=2)
-y = t(apply(x,1,function(u) u[1] + u[2]*cos(6*pi*my_grid)))
+y = t(apply(x,1,function(u) u[1] + u[2]*cos(6*pi*my_grid))) +
+  mvtnorm::rmvnorm(n, rep(0,2))
 x0 = mvtnorm::rmvnorm(n0, mu)
-fun=mean_multi()
-#fun=lm_multi()
+fun=lm_multi()
 
-B=3
+B=10
 
 final.multi=conformal.multidim.msplit(x=x,y=y, x0=x0,
                                       fun$train.fun, fun$predict.fun,
-                       alpha=0.1,
-                       split=NULL, seed=FALSE, randomized=FALSE,seed_beta=FALSE,
-                       verbose=FALSE, training_size=NULL,s_type="st-dev",B=B,lambda=0,
-                       score="l2")
-
-
-
+                       alpha=0.1, seed=1, training_size=0.5, s_type="st-dev",
+                       B=B, lambda=0, score="l2")
 
 final.depth=conformal.multidim.msplit(x=x,y=y, x0=x0,
                                       fun$train.fun, fun$predict.fun,
-                                      alpha=0.1, B=B, aggregation="depth")
+                                      alpha=0.1, seed=1, B=B, tau=0.2,
+                                      aggregation="depth")
 }
 \references{
 Solari, Djordjilovic (2022), "Multi Split Conformal Prediction",

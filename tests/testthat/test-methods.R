@@ -67,7 +67,7 @@ test_that("multi split, jackknife+ and full conformal return regions", {
   fun = lm_multi()
   for (aggregation in c("componentwise", "depth")) {
     out = conformal.multidim.msplit(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun,
-                                    B = 5, seed = 1, aggregation = aggregation)
+                                    B = 20, seed = 1, aggregation = aggregation)
     expect_equal(dim(out$lo), c(2, 2))
     expect_true(all(out$lo <= out$up))
   }
@@ -82,4 +82,87 @@ test_that("multi split, jackknife+ and full conformal return regions", {
 
 test_that("bikeMi data are available", {
   expect_equal(dim(conformalInference.multi::bikeMi), c(41, 6))
+})
+
+test_that("depth aggregation returns non-degenerate boxes and rejects too few vertices", {
+  d = make_data(n = 60)
+  fun = lm_multi()
+  out = conformal.multidim.msplit(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun,
+                                  B = 20, seed = 1, aggregation = "depth")
+  expect_true(all(out$up > out$lo))
+  expect_error(conformal.multidim.msplit(d$x, d$y, d$x0, fun$train.fun,
+                                         fun$predict.fun, B = 5, seed = 1,
+                                         aggregation = "depth"))
+})
+
+test_that("multi split: scalar training_size is recycled, seeds are reproducible", {
+  d = make_data(n = 60)
+  fun = lm_multi()
+  a = conformal.multidim.msplit(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun,
+                                B = 4, seed = 1, training_size = 0.7)
+  b = conformal.multidim.msplit(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun,
+                                B = 4, seed = 1, training_size = rep(0.7, 4))
+  expect_equal(a$lo, b$lo)
+  set.seed(3)
+  c1 = conformal.multidim.msplit(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun, B = 4)
+  set.seed(3)
+  c2 = conformal.multidim.msplit(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun, B = 4)
+  expect_equal(c1$up, c2$up)
+})
+
+test_that("mad functions with negative predictions give valid boxes", {
+  d = make_data()
+  fun = lm_multi()
+  out = conformal.multidim.split(d$x, d$y, rbind(d$x0, c(10, 10)), fun$train.fun,
+                                 fun$predict.fun, seed = 1,
+                                 mad.train.fun = fun$train.fun,
+                                 mad.predict.fun = function(out, newx)
+                                   -abs(fun$predict.fun(out, newx)) - 0.1)
+  expect_true(all(out$lo <= out$up))
+})
+
+test_that("jackknife+ works with elastic net and data frames", {
+  skip_if_not_installed("glmnet")
+  d = make_data()
+  fun = elastic.funs()
+  out = conformal.multidim.jackplus(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun)
+  expect_equal(dim(out$up), c(2, 2))
+  lfun = lm_multi()
+  dfx = as.data.frame(d$x)
+  pf = function(out, newx) lfun$predict.fun(out, as.matrix(newx))
+  tf = function(x, y) lfun$train.fun(as.matrix(x), y)
+  s1 = conformal.multidim.split(dfx, d$y, as.data.frame(d$x0), tf, pf, split = 1:20)
+  s2 = conformal.multidim.split(d$x, d$y, d$x0, lfun$train.fun, lfun$predict.fun,
+                                split = 1:20)
+  expect_equal(unname(s1$up), unname(s2$up))
+})
+
+test_that("full conformal with q = 1 can be plotted, s_type is the last argument", {
+  d = make_data()
+  fun = lm_multi()
+  full = conformal.multidim.full(d$x, d$y[, 1, drop = FALSE], d$x0[1, , drop = FALSE],
+                                 fun$train.fun, fun$predict.fun, num.grid.pts.dim = 10)
+  expect_s3_class(plot_multidim(full)[[1]], "ggplot")
+  expect_equal(tail(names(formals(conformal.multidim.full)), 1), "s_type")
+})
+
+test_that("randomized split returns the whole space when the quantile index exceeds l", {
+  d = make_data(n = 20)
+  fun = lm_multi()
+  found = FALSE
+  for (st in 1:200) {
+    tau = {set.seed(st); stats::runif(1)}
+    if (ceiling(10 + tau - 11 * 0.08) > 10) { found = TRUE; break }
+  }
+  skip_if_not(found)
+  expect_warning(out <- conformal.multidim.split(d$x, d$y, d$x0, fun$train.fun,
+                                                 fun$predict.fun, alpha = 0.08,
+                                                 split = 1:10, randomized = TRUE,
+                                                 seed_tau = st))
+  expect_true(all(is.infinite(out$up)))
+})
+
+test_that("bikeMi interaction column equals we * rain", {
+  expect_equal(conformalInference.multi::bikeMi$we_rain,
+               conformalInference.multi::bikeMi$we * conformalInference.multi::bikeMi$rain)
 })

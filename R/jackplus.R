@@ -13,8 +13,7 @@
 #'   responses at new feature values. Its input arguments should be out: output
 #'   produced by train.fun, and newx: feature values at which we want to make
 #'   predictions.
-#' @param alpha Miscoverage level for the prediction intervals, i.e., intervals
-#'   with coverage 1-alpha are formed. Default for alpha is 0.1.
+#' @param alpha Miscoverage level. Default for alpha is 0.1.
 #' @return A list with components x0, lo and up. lo and up are matrices of
 #'   dimension n0 x q containing the lower and upper bounds of the prediction
 #'   region for each test point.
@@ -27,7 +26,8 @@
 #'  ranked according to the depth -max_j |z_j|; the ceiling(2n(1-alpha/2))
 #'  deepest vectors are retained and their axis-aligned bounding box is
 #'  returned. The finite sample guarantee of the univariate jackknife+ is not
-#'  established for this extension.
+#'  established for this extension, and the coverage of the region can be
+#'  below 1-alpha, in particular when q is large relative to n.
 #' @details This function is based on the package future.apply to
 #'  perform parallelisation.
 #'
@@ -45,43 +45,36 @@ conformal.multidim.jackplus = function(x,y,x0, train.fun, predict.fun, alpha=0.1
               training_size=0.5, seed.tau=FALSE, randomized=FALSE,
               score="max")
 
-  x=as.matrix(x)
   y=as.matrix(y)
-  x0=as.matrix(x0)
   n=dim(x)[1]
-  p=dim(x)[2]
   q=dim(y)[2]
   n0=nrow(x0)
 
   ### Parallel sessions
   oplan = future::plan(future::multisession)
   on.exit(future::plan(oplan), add = TRUE)
-  options(future.rng.onMisuse="ignore")
 
-  ## Compute models without each observation
-  updated_models = future.apply::future_lapply(1:n,function(jj){
+  ## Fit the n leave-one-out models; each worker returns the absolute LOO
+  ## residual of the left-out observation and the predictions at x0
+  loo = future.apply::future_lapply(1:n,function(jj){
     mod_jj = train.fun(x[-jj,,drop=FALSE],y[-jj,,drop=FALSE])
-    return(mod_jj)})
+    list(res = abs(c(as.matrix(predict.fun(mod_jj, x[jj,,drop=FALSE]))) - y[jj,]),
+         fit0 = matrix(as.matrix(predict.fun(mod_jj, x0)), nrow=n0))
+  }, future.seed = TRUE)
 
-  ## Compute LOO residuals (n x q)
-  Loo = t(vapply(1:n, function(jj)
-    abs(c(predict.fun(updated_models[[jj]], x[jj,,drop=FALSE])) - y[jj,]),
-    numeric(q)))
-  if(q==1) Loo = matrix(Loo, ncol=1)
-
+  ## LOO residuals (n x q)
+  Loo = matrix(t(vapply(loo, function(l) l$res, numeric(q))), nrow=n, ncol=q)
 
   ## Fitted values of the LOO models at the test points (n x q for each x0)
   fitted = lapply(1:n0, function(i)
-    t(vapply(1:n, function(k)
-      c(predict.fun(updated_models[[k]], x0[i,,drop=FALSE])), numeric(q))))
+    matrix(t(vapply(loo, function(l) l$fit0[i,], numeric(q))), nrow=n, ncol=q))
 
 
   ## Number of retained vectors
   a = min(2*n, ceiling(2*n*(1-alpha/2)))
 
   box = lapply(1:n0, function(i){
-    fi = matrix(fitted[[i]], ncol=q)
-    joint = rbind(fi-Loo, fi+Loo)
+    joint = rbind(fitted[[i]]-Loo, fitted[[i]]+Loo)
     dep = depth.max(joint)
     kept = joint[order(dep,decreasing = TRUE)[1:a],,drop=FALSE]
     rbind(apply(kept,2,min),apply(kept,2,max))
@@ -101,6 +94,7 @@ conformal.multidim.jackplus = function(x,y,x0, train.fun, predict.fun, alpha=0.1
 #' maximum absolute standardised component. Larger values correspond to
 #' deeper (more central) vectors. Missing values are ignored in the
 #' standardisation (as in base::scale) and rows containing them get depth -Inf.
+#' Columns with numerically zero variance do not contribute.
 #'
 #' @param inp A matrix, each row being a vector.
 #' @return A vector of length nrow(inp).
@@ -108,9 +102,13 @@ conformal.multidim.jackplus = function(x,y,x0, train.fun, predict.fun, alpha=0.1
 
 depth.max=function(inp){
   inp=as.matrix(inp)
+  mus=colMeans(inp,na.rm=TRUE)
   sds=apply(inp,2,stats::sd,na.rm=TRUE)
-  sds[!is.finite(sds) | sds==0]=1
-  z=sweep(sweep(inp,2,colMeans(inp,na.rm=TRUE)),2,sds,"/")
+  # columns with (numerically) zero variance do not contribute
+  const=!is.finite(sds) | sds==0 | sds <= sqrt(.Machine$double.eps)*abs(mus)
+  sds[const]=1
+  z=sweep(sweep(inp,2,mus),2,sds,"/")
+  z[,const]=0
   d=-apply(abs(z),1,max)
   d[is.na(d)]=-Inf
   return(d)

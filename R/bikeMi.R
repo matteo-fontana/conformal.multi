@@ -3,7 +3,10 @@
 #' A dataset containing the daily number of trips of the BikeMi bike sharing
 #' service of Milan that started and ended in the Duomo district, from the
 #' 25th of January to the 6th of March 2016 (the 25th of February is
-#' excluded), together with daily meteorological covariates.
+#' excluded), together with daily meteorological covariates. The daily
+#' numbers of trips are the sums, over the 90 evaluation points, of the
+#' (smoothed) numbers of trips of the functional data set \code{bike_log} of
+#' the package conformalInference.fd, and are not integers.
 #'
 #' @format A data frame with 41 rows and 6 variables:
 #' \describe{
@@ -13,7 +16,7 @@
 #'   \item{rain}{mean amount of rain during the day}
 #'   \item{dtemp}{difference between the average temperature of the day and
 #'   that of the period}
-#'   \item{we_rain}{interaction between weekend and rain}
+#'   \item{we_rain}{interaction between weekend and rain, \code{we * rain}}
 #' }
 #' @source Torti, Pini, Vantini (2021), "Modelling time-varying mobility flows
 #'   using function-on-function regression: Analysis of a bike sharing system

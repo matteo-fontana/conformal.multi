@@ -13,6 +13,8 @@ plot_multidim_full(full)
 A list of ggplots (output[[i]] is the i-th observation prediction region).
   Each plot displays the trial values retained in the prediction region,
   coloured according to their conformal p-value, and the point prediction.
+  For a univariate response, the p-values of the retained trial values are
+  plotted against the trial values.
 }
 \description{
 Plot Prediction Regions obtained from Full Conformal

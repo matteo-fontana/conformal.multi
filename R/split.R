@@ -40,16 +40,16 @@
 #'   x: matrix of features, y: matrix of absolute residuals, and out: the output
 #'   produced by a previous call to mad.train.fun, at the \emph{same} features
 #'   x. The function mad.train.fun may (optionally) leverage this returned
-#'   output for efficiency purposes. See details below. The default for
-#'   mad.train.fun is NULL, which means that no training is done on the absolute
-#'   residuals, and the usual (unscaled) conformal score is used. Note that if
-#'   mad.train.fun is non-NULL, then so must be mad.predict.fun (next).
+#'   output for efficiency purposes. The default for mad.train.fun is NULL,
+#'   which means that no locally weighted scaling is done: the residuals are
+#'   then scaled only by the modulation function selected by s_type. Note that
+#'   if mad.train.fun is non-NULL, then so must be mad.predict.fun (next).
 #' @param mad.predict.fun A function to perform prediction for the (mean of the)
 #'   absolute residuals at new feature values. Its input arguments should be
 #'   out: output produced by mad.train.fun, and newx: feature values at which we
-#'   want to make predictions. The default for mad.predict.fun is NULL, which
-#'   means that no local scaling is done for the conformal score, i.e., the
-#'   usual (unscaled) conformal score is used.
+#'   want to make predictions. Its values must be positive (their absolute
+#'   value is used). The default for mad.predict.fun is NULL, which means that
+#'   no locally weighted scaling is done.
 #'
 #' @return A list with the following components: x0,pred,k_s,s_type,s,alpha,randomized,tau,
 #'   average_width,lo,up. In particular pred, lo, up are the matrices of
@@ -68,6 +68,9 @@
 #'   pred -/+ k_s*s*sqrt(diag(Sigma)) for "mahalanobis".
 #' @details If the two mad functions are provided they take precedence over the s_type parameter,
 #' and they force a local scoring via the mad function predicted values.
+#' @details In the randomized version, if ceiling(l + tau - (l+1)*alpha) > l the
+#'   prediction region is the whole space and lo, up are set to -Inf, Inf (with
+#'   a warning).
 #'
 #' @importFrom stats mad mahalanobis
 #'
@@ -94,9 +97,7 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
               =training_size, seed.tau=seed_tau, randomized=randomized,
               mad.train.fun = mad.train.fun, mad.predict.fun = mad.predict.fun, score = score)
 
-  x=as.matrix(x)
   y=as.matrix(y)
-  x0=as.matrix(x0)
   n=dim(x)[1]
   p=dim(x)[2]
   q=dim(y)[2]
@@ -142,7 +143,9 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
     tau=stats::runif(n=1,min=0,max=1)
   }
 
-  check.tau(alpha=alpha,tau=tau,l=l)
+  k_index=ceiling(l+tau-(l+1)*alpha)
+  if(randomized==FALSE || k_index<=l)
+    check.tau(alpha=alpha,tau=tau,l=l)
 
 
   ###### TRAINING & RESIDUALS COMPUTATION
@@ -152,8 +155,8 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
 
 
   out = train.fun(x[training,,drop=FALSE],y[training,,drop=FALSE])
-  fit = matrix(predict.fun(out,x),nrow=n)
-  pred = matrix(predict.fun(out,x0),nrow=n0)
+  fit = matrix(as.matrix(predict.fun(out,x)),nrow=n)
+  pred = matrix(as.matrix(predict.fun(out,x0)),nrow=n0)
 
   if (verbose) {
     cat(sprintf("%sComputing residuals and quantiles on second part ...\n",txt))
@@ -168,9 +171,12 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
   # predicted by the mad functions (trained on the training set only)
   if(flag){ # with mad
     mad.out = mad.train.fun(x[training,,drop=FALSE],abs(res[training,,drop=FALSE]))
-    scale.train = matrix(mad.predict.fun(mad.out,x[training,,drop=FALSE]),ncol=q)
-    scale.cal = matrix(mad.predict.fun(mad.out,x[calibration,,drop=FALSE]),ncol=q)
-    scale.x0 = matrix(mad.predict.fun(mad.out,x0),ncol=q)
+    scale.train = abs(matrix(as.matrix(mad.predict.fun(mad.out,x[training,,drop=FALSE])),ncol=q))
+    scale.cal = abs(matrix(as.matrix(mad.predict.fun(mad.out,x[calibration,,drop=FALSE])),ncol=q))
+    scale.x0 = abs(matrix(as.matrix(mad.predict.fun(mad.out,x0)),ncol=q))
+    if(any(!is.finite(c(scale.train,scale.cal,scale.x0))) ||
+       any(c(scale.train,scale.cal,scale.x0)==0))
+      stop("mad.predict.fun must return finite non-zero values")
   } else {
     scale.train = matrix(s,nrow=length(training),ncol=q,byrow=TRUE)
     scale.cal = matrix(s,nrow=l,ncol=q,byrow=TRUE)
@@ -192,7 +198,11 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
   }
 
 
-  k_s=sort(rho,decreasing=FALSE)[ceiling(l+tau-(l+1)*alpha)]
+  if(k_index>l){
+    warning("With the sampled value of tau the prediction region is the whole space")
+    k_s=Inf
+  } else
+    k_s=sort(rho,decreasing=FALSE)[k_index]
 
   # Half-widths of the bounding box of {y : score(y) <= k_s}
   if(score=="mahalanobis")

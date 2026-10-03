@@ -75,17 +75,17 @@ with varying local width. The input arguments to mad.train.fun should be
 x: matrix of features, y: matrix of absolute residuals, and out: the output
 produced by a previous call to mad.train.fun, at the \emph{same} features
 x. The function mad.train.fun may (optionally) leverage this returned
-output for efficiency purposes. See details below. The default for
-mad.train.fun is NULL, which means that no training is done on the absolute
-residuals, and the usual (unscaled) conformal score is used. Note that if
-mad.train.fun is non-NULL, then so must be mad.predict.fun (next).}
+output for efficiency purposes. The default for mad.train.fun is NULL,
+which means that no locally weighted scaling is done: the residuals are
+then scaled only by the modulation function selected by s_type. Note that
+if mad.train.fun is non-NULL, then so must be mad.predict.fun (next).}
 
 \item{mad.predict.fun}{A function to perform prediction for the (mean of the)
 absolute residuals at new feature values. Its input arguments should be
 out: output produced by mad.train.fun, and newx: feature values at which we
-want to make predictions. The default for mad.predict.fun is NULL, which
-means that no local scaling is done for the conformal score, i.e., the
-usual (unscaled) conformal score is used.}
+want to make predictions. Its values must be positive (their absolute
+value is used). The default for mad.predict.fun is NULL, which means that
+no locally weighted scaling is done.}
 }
 \value{
 A list with the following components: x0,pred,k_s,s_type,s,alpha,randomized,tau,
@@ -111,6 +111,10 @@ The residuals of the calibration set are divided component-wise by
 
 If the two mad functions are provided they take precedence over the s_type parameter,
 and they force a local scoring via the mad function predicted values.
+
+In the randomized version, if ceiling(l + tau - (l+1)*alpha) > l the
+  prediction region is the whole space and lo, up are set to -Inf, Inf (with
+  a warning).
 }
 \examples{
 

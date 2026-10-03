@@ -10,10 +10,8 @@
 #' @param train.fun A function to perform model training, i.e., to produce an
 #'   estimator of E(Y|X), the conditional expectation of the response variable
 #'   Y given features X. Its input arguments should be x: matrix of features,
-#'   y: vector of responses, and out: the output produced by a previous call
-#'   to train.fun, at the \emph{same} features x. The function train.fun may
-#'   (optionally) leverage this returned output for efficiency purposes. See
-#'   details below.
+#'   and y: matrix of responses. The model is fitted from scratch for each
+#'   trial value.
 #' @param predict.fun A function to perform prediction for the (mean of the)
 #'   responses at new feature values. Its input arguments should be out: output
 #'   produced by train.fun, and newx: feature values at which we want to make
@@ -23,15 +21,13 @@
 #' @param mad.train.fun A function to perform training on the absolute residuals
 #'   i.e., to produce an estimator of E(R|X) where R is the absolute residual
 #'   R = |Y - m(X)|, and m denotes the estimator produced by train.fun.
-#'   This is used to scale the conformal score, to produce a prediction interval
+#'   This is used to scale the conformal score, to produce a prediction region
 #'   with varying local width. The input arguments to mad.train.fun should be
-#'   x: matrix of features, y: vector of absolute residuals, and out: the output
-#'   produced by a previous call to mad.train.fun, at the \emph{same} features
-#'   x. The function mad.train.fun may (optionally) leverage this returned
-#'   output for efficiency purposes. See details below. The default for
+#'   x: matrix of features and y: matrix of absolute residuals. The default for
 #'   mad.train.fun is NULL, which means that no training is done on the absolute
-#'   residuals, and the usual (unscaled) conformal score is used. Note that if
-#'   mad.train.fun is non-NULL, then so must be mad.predict.fun (next).
+#'   residuals, and the residuals are scaled only by the modulation function
+#'   selected by s_type. Note that if mad.train.fun is non-NULL, then so must be
+#'   mad.predict.fun (next), which must return positive values.
 #' @param mad.predict.fun A function to perform prediction for the (mean of the)
 #'   absolute residuals at new feature values. Its input arguments should be
 #'   out: output produced by mad.train.fun, and newx: feature values at which we
@@ -87,9 +83,8 @@
 conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,mad.train.fun = NULL,
                                 mad.predict.fun = NULL,
                                 score=c('l2','mahalanobis','max'),
-                                s_type=c("st-dev","identity"),
                                 num.grid.pts.dim=100, grid.factor=1.25,
-                                verbose=FALSE) {
+                                verbose=FALSE, s_type=c("st-dev","identity")) {
 
   score = match.arg(score)
   s_type = match.arg(s_type)
@@ -100,7 +95,7 @@ conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,
   q = ncol(y)
   n = nrow(x)
   p = ncol(x)
-  x0 = matrix(x0,ncol=p)
+  x0 = matrix(as.matrix(x0),ncol=p)
   n0 = nrow(x0)
   valid_points = vector("list",n0)
   check.full(x,y,x0,train.fun,predict.fun, alpha, num.grid.pts.dim,grid.factor,score,
@@ -124,8 +119,8 @@ conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,
 
   # Train, fit, and predict on full data set
   out = train.fun(x,y)
-  fit = matrix(predict.fun(out,x),nrow=n)
-  pred = matrix(predict.fun(out,x0),nrow=n0)
+  fit = matrix(as.matrix(predict.fun(out,x)),nrow=n)
+  pred = matrix(as.matrix(predict.fun(out,x0)),nrow=n0)
 
   # Trial values for y, empty lo, up matrices to fill
   ymax = apply(abs(y),2,max)
@@ -138,7 +133,6 @@ conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,
 
   oplan = future::plan(future::multisession)
   on.exit(future::plan(oplan), add = TRUE)
-  options(future.rng.onMisuse="ignore")
 
 
   for(k in 1:n0){
@@ -155,18 +149,14 @@ conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,
 
       yy = rbind(y,yvals[j,])
 
-      if (j==1)
-        out = train.fun(xx,yy)
-      else
-        out = train.fun(xx,yy,out)
-
-      r = yy - matrix(predict.fun(out,xx),nrow=n+1)
+      # Each trial value is processed independently (possibly on a different
+      # worker): the models are fitted from scratch on the augmented data
+      out.j = train.fun(xx,yy)
+      r = yy - matrix(as.matrix(predict.fun(out.j,xx)),nrow=n+1)
       if (!is.null(mad.train.fun) && !is.null(mad.predict.fun)) {
-        if (j==1)
-          out.mad = mad.train.fun(xx,abs(r))
-        else
-          out.mad = mad.train.fun(xx,abs(r),out.mad)
-        r = r / matrix(mad.predict.fun(out.mad,xx),nrow=n+1)
+        out.mad = mad.train.fun(xx,abs(r))
+        scale.j = abs(matrix(as.matrix(mad.predict.fun(out.mad,xx)),nrow=n+1))
+        r = r / scale.j
       } else {
         s = computing_s_regression(mat_residual=r,type=s_type,
                                    alpha=alpha,tau=1)
@@ -181,7 +171,7 @@ conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,
 
       return(sum(ncm>=ncm[n+1])/(n+1))
 
-  })
+  }, future.seed = TRUE)
     pval_matrix=data.frame(cbind(yvals,pval=pvals))
     valid_points[[k]] = data.frame(pval_matrix[which(pvals > alpha),])
   }

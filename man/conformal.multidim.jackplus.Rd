@@ -23,8 +23,7 @@ responses at new feature values. Its input arguments should be out: output
 produced by train.fun, and newx: feature values at which we want to make
 predictions.}
 
-\item{alpha}{Miscoverage level for the prediction intervals, i.e., intervals
-with coverage 1-alpha are formed. Default for alpha is 0.1.}
+\item{alpha}{Miscoverage level. Default for alpha is 0.1.}
 }
 \value{
 A list with components x0, lo and up. lo and up are matrices of
@@ -43,7 +42,8 @@ The work is an extension of the univariate approach to jackknife +
  ranked according to the depth -max_j |z_j|; the ceiling(2n(1-alpha/2))
  deepest vectors are retained and their axis-aligned bounding box is
  returned. The finite sample guarantee of the univariate jackknife+ is not
- established for this extension.
+ established for this extension, and the coverage of the region can be
+ below 1-alpha, in particular when q is large relative to n.
 
 This function is based on the package future.apply to
  perform parallelisation.
