@@ -71,11 +71,11 @@ A list with three components: train.fun, predict.fun, active.fun.
 }
 \description{
 Construct training and prediction functions for the elastic net, the lasso,
-  or ridge regression, based on the \code{\link{glmnet}} package, over a
-  sequence of (given or internally computed) lambda values.
+or ridge regression, based on the \code{\link[glmnet]{glmnet}} package, over a
+sequence of (given or internally computed) lambda values.
 }
 \details{
-This function is based on the packages \code{\link{glmnet}}.
+This function is based on the package \code{\link[glmnet]{glmnet}}.
   Notice that Cross Validation to select the best lambda value is compulsory!
   The functions lasso.funs and ridge.funs are convenience
   functions, they simply call elastic.funs with gamma = 1 and gamma = 0,

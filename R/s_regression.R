@@ -1,20 +1,23 @@
-#' Computing modulation function for residuals.
+#' Compute modulation function for residuals
 #'
-#' It is an helper function for \code{\link{conformal.multidim.split}}  and
-#' \code{\link{conformal.multidim.msplit}}
+#' Helper function used internally by \code{\link{conformal.multidim.split}} and
+#' \code{\link{conformal.multidim.msplit}}.
 #'
-#' @param mat_residual A vector of the residuals obtained via multivariate modeling.
-#' @param type A string indicating the type of modulation function chosen.
-#' The alternatives are "identity","st-dev","alpha-max".
-#' @param alpha The value of the confidence interval.
-#' @param tau A number between 0 and 1 used for the randomized version of the algorithm
-#' @return It returns local scoring values for the residuals.
-#' @description It computes values for local scoring.
+#' @param mat_residual A vector of residuals obtained via multivariate modeling.
+#' @param type A string indicating the type of modulation function. Options are
+#'   "identity", "st-dev", or "alpha-max".
+#' @param alpha The confidence level for the interval.
+#' @param tau A number between 0 and 1 used for the randomized version of the algorithm.
+#'
+#' @return Local scoring values for the residuals.
+#'
+#' @seealso \code{\link{conformal.multidim.split}}, \code{\link{conformal.multidim.msplit}}
 #'
 #' @importFrom stats cov sd var
-#' @references "Conformal Prediction Bands for Multivariate Functional Data"
-#' by Diquigiovanni, Fontana, Vantini (2021)
+#' @references Diquigiovanni, Fontana, Vantini (2021), "Conformal Prediction Bands for Multivariate Functional Data"
 #' @export computing_s_regression
+
+
 
 
 computing_s_regression=function(mat_residual,type,alpha,tau){

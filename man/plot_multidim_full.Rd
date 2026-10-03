@@ -16,7 +16,7 @@ A list of ggplots (output[[i]] is the i-th observation confidence region).
 Plot Confidence Regions obtained from Full Conformal
 }
 \details{
-It exploits the package \code{\link{ggplot2}} and \code{\link{hrbrthemes}}
+It exploits the package \code{\link[ggplot2]{ggplot2}}
 to better visualize the results.
 }
 \examples{

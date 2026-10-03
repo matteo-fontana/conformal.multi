@@ -25,71 +25,57 @@ conformal.multidim.msplit(
 )
 }
 \arguments{
-\item{x}{The feature variables, a matrix nxp.}
+\item{x}{Feature matrix of dimension n x p.}
 
-\item{y}{The matrix of multivariate responses (dimension nxq)}
+\item{y}{Response matrix of dimension n x q.}
 
-\item{x0}{The new points to evaluate, a matrix of dimension n0xp.}
+\item{x0}{New points to evaluate, matrix of dimension n0 x p.}
 
-\item{train.fun}{A function to perform model training, i.e., to produce an
-estimator of E(Y|X), the conditional expectation of the response variable
-Y given features X. Its input arguments should be x: matrix of features,
-and y: matrix of responses.}
+\item{train.fun}{Function to perform model training, producing an estimator of E(Y|X).
+Input arguments: x (features), y (responses).}
 
-\item{predict.fun}{A function to perform prediction for the (mean of the)
-responses at new feature values. Its input arguments should be out: output
-produced by train.fun, and newx: feature values at which we want to make
-predictions.}
+\item{predict.fun}{Function to predict responses at new feature values.
+Input arguments: out (output from train.fun), newx (new features).}
 
-\item{alpha}{Miscoverage level for the prediction intervals, i.e., intervals
-with coverage 1-alpha are formed. Default for alpha is 0.1.}
+\item{alpha}{Miscoverage level for prediction intervals. Default 0.1.}
 
-\item{split}{Indices that define the data-split to be used (i.e., the indices
-define the first half of the data-split, on which the model is trained).
-Default is NULL, in which case the split is chosen randomly.}
+\item{split}{Indices defining the training split. Default NULL (random split).}
 
-\item{seed}{Integer to be passed to set.seed before defining the random
-data-split to be used. Default is FALSE, which effectively sets no seed.
-If both split and seed are passed, the former takes priority and the latter
-is ignored.}
+\item{seed}{Integer seed for random split. Ignored if split is provided. Default FALSE.}
 
-\item{randomized}{Should the randomized approach be used? Default is FALSE.}
+\item{randomized}{Logical, whether to use the randomized approach. Default FALSE.}
 
-\item{seed_beta}{The seed for the randomized version. Default is FALSE.}
+\item{seed_beta}{Seed for the randomized version. Default FALSE.}
 
-\item{verbose}{Should intermediate progress be printed out? Default is FALSE.}
+\item{verbose}{Logical, print progress? Default FALSE.}
 
-\item{training_size}{Split proportion between training and calibration set.
-Default is 0.5.}
+\item{training_size}{Proportion of data used for training. Default 0.5.}
 
-\item{score}{The chosen score for the split conformal function.}
+\item{score}{Nonconformity measure to use for the split conformal function.}
 
-\item{s_type}{The type of modulation function.
-Currently we have 3 options: "identity","st-dev","alpha-max". Default is "std-dev"}
+\item{s_type}{Type of modulation function: "identity", "st-dev", or "alpha-max". Default "st-dev".}
 
-\item{B}{Number of repetitions. Default is 100.}
+\item{B}{Number of repetitions. Default 100.}
 
-\item{lambda}{Smoothing parameter. Default is 0.}
+\item{lambda}{Smoothing parameter. Default 0.}
 
-\item{tau}{It is a smoothing parameter:
-tau=1-1/B  Bonferroni intersection method
-tau=0 unadjusted intersection
-Default is 1-(B+1)/(2*B).}
+\item{tau}{Smoothing parameter for intersection method:
+\describe{
+  \item{tau = 1 - 1/B}{Bonferroni intersection method.}
+  \item{tau = 0}{Unadjusted intersection.}
+}
+Default 1 - (B + 1)/(2 * B).}
 }
 \value{
-A list with the following components x0, lo, up. In particular lo and up
-are matrices of dimension n0 x q.
+A list with components x0, lo, and up. lo and up are matrices of dimension n0 x q.
 }
 \description{
-Compute prediction intervals using Multi Split conformal inference with
+Compute prediction intervals using Multi Split conformal inference for a
 multivariate response.
 }
 \details{
-The work is an extension of the univariate approach to Multi Split
-conformal inference to a multivariate context.
-
-This function is based on the package \code{\link{future.apply}} to
- perform parallelization.
+This function extends the univariate Multi Split conformal approach to the multivariate case.
+  Parallelization is performed via the \code{\link[future.apply]{future_sapply}} function.
 }
 \examples{
 
@@ -117,6 +103,5 @@ final.multi=conformal.multidim.msplit(x=x,y=y, x0=x0,
 
 }
 \references{
-"Multi Split Conformal Prediction" by Solari, Djordjilovic (2021) is
-the baseline for the univariate case.
+Solari, Djordjilovic (2021), "Multi Split Conformal Prediction" (baseline for univariate case)
 }

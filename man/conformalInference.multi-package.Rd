@@ -6,7 +6,7 @@
 \alias{conformalInference.multi-package}
 \title{conformalInference.multi: Conformal Inference Tools for Regression with Multivariate Response}
 \description{
-It computes full conformal, split conformal and multi split conformal prediction regions when the response variable is multivariate (i.e. dimension is greater than one). Moreover, the package also contain plot functions to visualize the output of the full and split conformal functions. To guarantee consistency, the package structure mimics the univariate conformalInference package of professor Ryan Tibshirani.
+It computes full conformal, split conformal and multi-split conformal prediction regions when the response variable is multivariate (i.e. dimension is greater than one). Moreover, the package also contains plot functions to visualize the output of the full and split conformal functions. To guarantee consistency, the package structure mimics the univariate package 'conformalInference' by Ryan Tibshirani. See Lei, G’sell, Rinaldo, Tibshirani, & Wasserman (2018) \doi{10.1080/01621459.2017.1307116} for full and split conformal prediction in regression, and Barber, Candès, Ramdas, & Tibshirani (2023) \doi{10.1214/23-AOS2276} for extensions beyond exchangeability.
 }
 \seealso{
 Useful links:

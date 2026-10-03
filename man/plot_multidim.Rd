@@ -7,21 +7,20 @@
 plot_multidim(split, same.scale = FALSE)
 }
 \arguments{
-\item{split}{The output of a split multivariate conformal
-prediction function.}
+\item{split}{Output of a split multivariate conformal prediction function.}
 
-\item{same.scale}{Should I force the same scale for all the y-axis ? Default
-is FALSE.}
+\item{same.scale}{Logical. Should all plots use the same y-axis scale? Default is FALSE.}
 }
 \value{
-g_list A list of ggplots
+A list of \code{ggplot} objects, one for each observation (n0 = length(x0)).
 }
 \description{
-Plot Confidence Regions obtained with Split Conformal
+Generate plots for the confidence regions produced by a split multivariate conformal
+prediction function.
 }
 \details{
-It exploits the package \code{\link{ggplot2}} and \code{\link{gridExtra}}
-to better visualize the results. It outputs n0=length(x0) plots.
+This function uses the \code{\link[ggplot2]{ggplot2}} and
+  \code{\link[gridExtra]{gridExtra}} packages for visualization.
 }
 \examples{
 

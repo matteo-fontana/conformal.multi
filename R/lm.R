@@ -1,23 +1,29 @@
 #' Linear Modeling of Multivariate Response
 #'
-#' This model is fed to conformal prediction functions.
-#' It outputs a training function and a prediction function.
+#' This model can be used with conformal prediction functions.
+#' It returns a training function and a prediction function.
 #'
-#' @return A list with the training function and the prediction function.
+#' @return A list with two components:
+#' \item{train.fun}{Function to train the model. Fits a separate linear model for each dimension of the response.}
+#' \item{predict.fun}{Function to make predictions on new data.}
+#'
 #' @details
 #' The training function takes as input:
+#' \describe{
+#'   \item{x}{Feature matrix of dimension n x p.}
+#'   \item{y}{Response matrix of dimension n x q.}
+#' }
 #'
-#' x The feature matrix  (dim n x p)
-#' y The response matrix (dim n x q)
+#' The prediction function takes as input:
+#' \describe{
+#'   \item{out}{Output of a previous call to \code{train.fun}.}
+#'   \item{newx}{New feature matrix to evaluate, dimension n0 x p.}
+#' }
 #'
-#' The predict function, instead, takes as input:
-#'
-#' out The output of a previous call to train.fun
-#' newx The new features to evaluate (i.e. an n0 x p matrix)
-#' Here I defined an lm model for every dimension of the responses (q).
 #' @importFrom stats lm
 #' @seealso \code{\link{conformal.multidim.split}}
 #' @export lm_multi
+
 
 
 

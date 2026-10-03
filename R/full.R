@@ -59,8 +59,8 @@
 #'   selected points on the y-grid as well as the p-values.
 #'
 #' @details Due to eventual computational overload the function is restricted to a bivariate y.
-#' @details This function is based on the package \code{\link{future.apply}} to
-#'  perform parallelization.
+#' @details This function is based on the package \code{\link[future.apply]{future.apply}}
+#'  to perform parallelization.
 #'
 #' @details If the data (training and test) are assumed to be exchangeable, the basic
 #'   assumption underlying conformal prediction, then the probability that a new
@@ -77,6 +77,7 @@
 #' @example inst/examples/ex.full.R
 #'
 #' @export conformal.multidim.full
+
 
 conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,mad.train.fun = NULL,
                                 mad.predict.fun = NULL,

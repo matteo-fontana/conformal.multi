@@ -1,14 +1,19 @@
 #' Plot Confidence Regions obtained with Split Conformal
 #'
-#' @param split The output of a split multivariate conformal
+#' Generate plots for the confidence regions produced by a split multivariate conformal
 #' prediction function.
-#' @param same.scale Should I force the same scale for all the y-axis ? Default
-#' is FALSE.
-#' @return g_list A list of ggplots
-#' @details It exploits the package \code{\link{ggplot2}} and \code{\link{gridExtra}}
-#' to better visualize the results. It outputs n0=length(x0) plots.
+#'
+#' @param split Output of a split multivariate conformal prediction function.
+#' @param same.scale Logical. Should all plots use the same y-axis scale? Default is FALSE.
+#'
+#' @return A list of \code{ggplot} objects, one for each observation (n0 = length(x0)).
+#'
+#' @details This function uses the \code{\link[ggplot2]{ggplot2}} and
+#'   \code{\link[gridExtra]{gridExtra}} packages for visualization.
+#'
 #' @example inst/examples/ex.split.R
 #' @export plot_multidim
+
 
 
 

@@ -1,12 +1,15 @@
-#' BUILDING THE MULTISPLIT INTERVAL FOR EACH X0, BY COMBINING MULTIPLE
-#' SPLIT WITH MULTISPLIT ALGORITHM
+#' Build Multi-Split Interval for Each X0
 #'
+#' Constructs a multi-split prediction interval for each new point X0 by combining
+#' results from multiple split conformal predictions using the multi-split algorithm.
 #'
-#' @param yyy column vector of B lower bounds and B upper bounds
-#' @param B number of replications
-#' @param tr truncation threshold for the algorithm
+#' @param yyy Column vector containing B lower bounds and B upper bounds.
+#' @param B Number of replications used in the multi-split procedure.
+#' @param tr Truncation threshold for the algorithm.
+#'
 #' @importFrom utils flush.console
 #' @noRd
+
 
 
 interval.build=function(yyy,B,tr){

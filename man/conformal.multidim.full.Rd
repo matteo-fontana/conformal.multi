@@ -94,8 +94,8 @@ response
 \details{
 Due to eventual computational overload the function is restricted to a bivariate y.
 
-This function is based on the package \code{\link{future.apply}} to
- perform parallelization.
+This function is based on the package \code{\link[future.apply]{future.apply}}
+ to perform parallelization.
 
 If the data (training and test) are assumed to be exchangeable, the basic
   assumption underlying conformal prediction, then the probability that a new
