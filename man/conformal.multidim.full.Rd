@@ -71,17 +71,18 @@ intervals (each num.grid.pts.dim^q points is a trial point). Default is
 
 \item{grid.factor}{Expansion factor used to define the grid for the conformal
 intervals, i.e., the grid points are taken to be equally spaced in between
--grid.factor*max(abs(y)) and grid.factor*max(abs(y)). Default is 1.25. In
-this case (and with exchangeable data, thus unity weights) the restriction
-of the trial values to this range costs at most 1/(n+1) in coverage. See
-details below.}
+-grid.factor*max(abs(y[,k])) and grid.factor*max(abs(y[,k])) in each
+dimension k. Default is 1.25. In this case (and with exchangeable data)
+the restriction of the trial values to this range costs at most q/(n+1)
+in coverage. See details below.}
 
 \item{verbose}{Should intermediate progress be printed out? Default is FALSE.}
 
 \item{s_type}{The type of modulation function applied to the residuals before
 computing the score: "st-dev" (default), where each component is divided by
 its standard deviation, or "identity" (no scaling). The modulation is
-computed on the augmented data set, at each trial value.}
+computed on the augmented data set, at each trial value. It is ignored when
+the mad functions are provided.}
 }
 \value{
 A list with the following components: pred, valid_points. The first
@@ -101,14 +102,19 @@ This function is based on the package \code{\link[future.apply]{future.apply}}
  to perform parallelization.
 
 If the data (training and test) are assumed to be exchangeable, the basic
-  assumption underlying conformal prediction, then the probability that a new
-  response value will lie outside of (-max(abs(y)), max(abs(y))), where y is
-  the vector of training responses, is 1/(n+1).  Thus the restriction of the
-  trials values to (-grid.factor*max(abs(y)), grid.factor*max(abs(y))), for
-  all choices grid.factor >= 1, will lead to a loss in coverage of at most
-  1/(n+1). This was also noted in "Trimmed Conformal Prediction for
-  High-Dimensional Models" by Chen, Wang, Ha, Barber (2016) (who use this
-  basic fact as motivation for proposing more refined trimming methods).
+  assumption underlying conformal prediction, then the probability that the
+  k-th component of a new response lies outside of
+  (-max(abs(y[,k])), max(abs(y[,k]))) is at most 1/(n+1). Thus the
+  restriction of the trial values to the box with sides
+  (-grid.factor*max(abs(y[,k])), grid.factor*max(abs(y[,k]))), for
+  grid.factor >= 1, leads to a loss in coverage of at most q/(n+1) (union
+  bound). For q = 1 this was noted in "Trimmed Conformal Prediction for
+  High-Dimensional Models" by Chen, Wang, Ha, Barber (2016). The prediction
+  region is returned as the finite set of trial values with p-value larger
+  than alpha.
+
+If the two mad functions are provided they take precedence over the
+  s_type parameter.
 }
 \examples{
 

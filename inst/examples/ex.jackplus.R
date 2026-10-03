@@ -10,3 +10,6 @@ funs=lm_multi()
 
 sol<-conformal.multidim.jackplus(x[-n,],y[-n,],x0,train.fun = funs$train.fun,
                                  predict.fun = funs$predict.fun)
+
+sol.max<-conformal.multidim.jackplus(x[-n,],y[-n,],x0,train.fun = funs$train.fun,
+                                     predict.fun = funs$predict.fun, method = "max")

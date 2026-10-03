@@ -45,8 +45,8 @@ plot_multidim=function(split, same.scale = FALSE){
 
   if(same.scale){
 
-    y_up = max(up) +0.01 * sd(up)
-    y_lo = min(lo) -0.01 * sd(lo)
+    y_up = max(up, na.rm = TRUE) + 0.01 * sd(up, na.rm = TRUE)
+    y_lo = min(lo, na.rm = TRUE) - 0.01 * sd(lo, na.rm = TRUE)
 
   }
 

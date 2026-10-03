@@ -4,7 +4,16 @@
 \alias{conformal.multidim.jackplus}
 \title{Multivariate Response Jackknife + Prediction Regions}
 \usage{
-conformal.multidim.jackplus(x, y, x0, train.fun, predict.fun, alpha = 0.1)
+conformal.multidim.jackplus(
+  x,
+  y,
+  x0,
+  train.fun,
+  predict.fun,
+  alpha = 0.1,
+  method = c("depth", "max"),
+  scale = NULL
+)
 }
 \arguments{
 \item{x}{The feature variables, a matrix n x p.}
@@ -24,6 +33,14 @@ produced by train.fun, and newx: feature values at which we want to make
 predictions.}
 
 \item{alpha}{Miscoverage level. Default for alpha is 0.1.}
+
+\item{method}{The multivariate extension of the jackknife+: "depth"
+(default) or "max". See details.}
+
+\item{scale}{Only for method = "max": vector of q positive constants that
+scale the components of the residuals. They must not depend on the data
+for the coverage guarantee to hold. Default NULL, i.e. 1 for every
+component.}
 }
 \value{
 A list with components x0, lo and up. lo and up are matrices of
@@ -35,15 +52,28 @@ Compute prediction regions using multivariate Jackknife + inference.
 }
 \details{
 The work is an extension of the univariate approach to jackknife +
- inference to a multivariate context, exploiting the concept of depth measures.
- For each test point x0, the n leave-one-out models give the 2n vectors
- mu_{-i}(x0) -/+ R_i, where R_i is the vector of absolute leave-one-out
- residuals of observation i. The vectors are standardised component-wise and
- ranked according to the depth -max_j |z_j|; the ceiling(2n(1-alpha/2))
- deepest vectors are retained and their axis-aligned bounding box is
- returned. The finite sample guarantee of the univariate jackknife+ is not
- established for this extension, and the coverage of the region can be
- below 1-alpha, in particular when q is large relative to n.
+ inference to a multivariate context. Let R_i be the vector of absolute
+ leave-one-out residuals of observation i and mu_{-i} the leave-one-out
+ regression function.
+
+ With method = "depth", the 2n vectors mu_{-i}(x0) -/+ R_i are standardised
+ component-wise and ranked according to the depth -max_j |z_j|; the
+ ceiling(2n(1-alpha/2)) deepest vectors are retained and their axis-aligned
+ bounding box is returned. This is a heuristic: the finite sample guarantee
+ of the univariate jackknife+ is not established for it, and the coverage
+ of the region can be below 1-alpha, in particular when q is large relative
+ to n.
+
+ With method = "max", the jackknife+ of Barber et al. (2021) is applied to
+ the scalar score r_i = max_j R_ij / scale_j: for each component j, the
+ lower bound is the floor(alpha(n+1))-th smallest value of
+ mu_{-i,j}(x0) - scale_j r_i and the upper bound is the
+ ceiling((1-alpha)(n+1))-th smallest value of mu_{-i,j}(x0) + scale_j r_i
+ (-Inf and Inf when the index is out of range). The box contains the
+ jackknife+ prediction set based on the score max_j |y_j - mu_j(x)| /
+ scale_j, so that, under exchangeability and if the regression algorithm
+ treats the observations symmetrically, its coverage is at least 1-2alpha
+ (Barber et al., 2021, Theorem 1). For q = 1 it is the jackknife+ interval.
 
 This function is based on the package future.apply to
  perform parallelisation.
@@ -61,6 +91,9 @@ funs=lm_multi()
 
 sol<-conformal.multidim.jackplus(x[-n,],y[-n,],x0,train.fun = funs$train.fun,
                                  predict.fun = funs$predict.fun)
+
+sol.max<-conformal.multidim.jackplus(x[-n,],y[-n,],x0,train.fun = funs$train.fun,
+                                     predict.fun = funs$predict.fun, method = "max")
 }
 \references{
 Barber, Candes, Ramdas, Tibshirani (2021), "Predictive inference

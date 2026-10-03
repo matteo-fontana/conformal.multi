@@ -13,6 +13,12 @@
 
 ## New features
 
+* `conformal.multidim.jackplus()` gains the arguments `method` and `scale`.
+  `method = "depth"` (default) is the depth-based extension described above;
+  `method = "max"` applies the jackknife+ of Barber et al. (2021) to the
+  scalar score `max_j |R_ij| / scale_j`, whose coverage is at least
+  `1 - 2 alpha`; for a univariate response it is the jackknife+ interval.
+
 * `conformal.multidim.msplit()` gains the argument `aggregation`.
   `"componentwise"` (default) is the aggregation of version 1.1.2;
   `"depth"` is the depth-based aggregation of version 1.1.1, which requires
@@ -22,7 +28,8 @@
   function again. A scalar `training_size` is used for every split.
 * `conformal.multidim.full()` gains the argument `s_type` (`"st-dev"`,
   default, or `"identity"`), as in version 1.1.1; it is the last argument, so
-  that positional calls written for version 1.1.2 still work.
+  that positional calls written for version 1.1.2 still work. Version 1.1.2
+  applied no scaling: use `s_type = "identity"` to reproduce its results.
 * `plot_multidim()` accepts the output of every prediction function: it
   dispatches to `plot_multidim_full()` for full conformal output and displays
   interval midpoints when no point prediction is available.

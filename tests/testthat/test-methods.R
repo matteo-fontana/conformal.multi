@@ -166,3 +166,24 @@ test_that("bikeMi interaction column equals we * rain", {
   expect_equal(conformalInference.multi::bikeMi$we_rain,
                conformalInference.multi::bikeMi$we * conformalInference.multi::bikeMi$rain)
 })
+
+test_that("jackknife+ with method = 'max' equals the jackknife+ interval for q = 1", {
+  d = make_data(n = 30)
+  fun = lm_multi()
+  y1 = d$y[, 1, drop = FALSE]
+  out = conformal.multidim.jackplus(d$x, y1, d$x0, fun$train.fun, fun$predict.fun,
+                                    alpha = 0.1, method = "max")
+  n = nrow(d$x)
+  loo = lapply(1:n, function(i) fun$train.fun(d$x[-i, ], y1[-i, , drop = FALSE]))
+  R = sapply(1:n, function(i) abs(y1[i, 1] - fun$predict.fun(loo[[i]], d$x[i, , drop = FALSE])))
+  mu0 = sapply(1:n, function(i) fun$predict.fun(loo[[i]], d$x0))
+  lo = apply(mu0, 1, function(m) sort(m - R)[floor(0.1 * (n + 1))])
+  up = apply(mu0, 1, function(m) sort(m + R)[ceiling(0.9 * (n + 1))])
+  expect_equal(c(out$lo), lo)
+  expect_equal(c(out$up), up)
+  out2 = conformal.multidim.jackplus(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun,
+                                     method = "max", scale = c(1, 2))
+  expect_true(all(out2$lo < out2$up))
+  expect_error(conformal.multidim.jackplus(d$x, d$y, d$x0, fun$train.fun,
+                                           fun$predict.fun, method = "max", scale = 1))
+})
