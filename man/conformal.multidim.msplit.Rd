@@ -21,7 +21,10 @@ conformal.multidim.msplit(
   s_type = "st-dev",
   B = 100,
   lambda = 0,
-  tau = 1 - (B + 1)/(2 * B)
+  tau = NULL,
+  aggregation = c("componentwise", "depth"),
+  mad.train.fun = NULL,
+  mad.predict.fun = NULL
 )
 }
 \arguments{
@@ -49,7 +52,8 @@ Input arguments: out (output from train.fun), newx (new features).}
 
 \item{verbose}{Logical, print progress? Default FALSE.}
 
-\item{training_size}{Proportion of data used for training. Default 0.5.}
+\item{training_size}{Vector of length B with the proportion of data used for
+training in each split. Default NULL, i.e. 0.5 for every split.}
 
 \item{score}{Nonconformity measure to use for the split conformal function.}
 
@@ -59,12 +63,24 @@ Input arguments: out (output from train.fun), newx (new features).}
 
 \item{lambda}{Smoothing parameter. Default 0.}
 
-\item{tau}{Smoothing parameter for intersection method:
+\item{tau}{Parameter of the multi split procedure. Each split conformal
+region is computed at miscoverage level alpha*(1-tau+lambda/B). With
+aggregation = "componentwise", a value is retained in the final interval of
+a component when it is contained in more than tau*B of the B split
+intervals of that component:
 \describe{
   \item{tau = 1 - 1/B}{Bonferroni intersection method.}
   \item{tau = 0}{Unadjusted intersection.}
 }
-Default 1 - (B + 1)/(2 * B).}
+With aggregation = "depth", the floor(2*tau*B) deepest of the 2B vertices
+are retained. Default NULL, i.e. 1 - (B + 1)/(2 * B) for "componentwise"
+and 0.1 for "depth".}
+
+\item{aggregation}{How the B split conformal regions are combined, either
+"componentwise" (default) or "depth". See details.}
+
+\item{mad.train.fun, mad.predict.fun}{Optional functions for local scaling of
+the residuals, passed to \code{\link{conformal.multidim.split}}. Default NULL.}
 }
 \value{
 A list with components x0, lo, and up. lo and up are matrices of dimension n0 x q.
@@ -75,6 +91,18 @@ multivariate response.
 }
 \details{
 This function extends the univariate Multi Split conformal approach to the multivariate case.
+  The split conformal method is run B times, each run returning an
+  axis-aligned box with lower vertex lo^b and upper vertex up^b.
+  With aggregation = "componentwise" the univariate multi split procedure of
+  Solari and Djordjilovic (2022) is applied to each component separately.
+  The resulting box contains every y that belongs to more than tau*B of the
+  B regions, so that its coverage is at least 1-alpha. If, for a component,
+  the set of retained values is not an interval, its convex hull is returned.
+  With aggregation = "depth" the 2B vertices lo^b, up^b are ranked according
+  to the depth -max_j |z_j|, where z is the vertex standardised
+  component-wise, the floor(2*tau*B) deepest vertices are retained and their
+  bounding box is returned. The latter is a heuristic: no finite sample
+  coverage guarantee is available for it.
   Parallelization is performed via the \code{\link[future.apply]{future_sapply}} function.
 }
 \examples{
@@ -101,7 +129,12 @@ final.multi=conformal.multidim.msplit(x=x,y=y, x0=x0,
 
 
 
+
+final.depth=conformal.multidim.msplit(x=x,y=y, x0=x0,
+                                      fun$train.fun, fun$predict.fun,
+                                      alpha=0.1, B=B, aggregation="depth")
 }
 \references{
-Solari, Djordjilovic (2021), "Multi Split Conformal Prediction" (baseline for univariate case)
+Solari, Djordjilovic (2022), "Multi Split Conformal Prediction",
+  Statistics and Probability Letters 184, 109395 (baseline for univariate case).
 }

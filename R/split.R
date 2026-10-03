@@ -37,7 +37,7 @@
 #'   R = |Y - m(X)|, and m denotes the estimator produced by train.fun.
 #'   This is used to scale the conformal score, to produce a prediction interval
 #'   with varying local width. The input arguments to mad.train.fun should be
-#'   x: matrix of features, y: vector of absolute residuals, and out: the output
+#'   x: matrix of features, y: matrix of absolute residuals, and out: the output
 #'   produced by a previous call to mad.train.fun, at the \emph{same} features
 #'   x. The function mad.train.fun may (optionally) leverage this returned
 #'   output for efficiency purposes. See details below. The default for
@@ -57,6 +57,15 @@
 #'   alpha is a scalar between 0 and 1, randomized is a logical value,
 #'   tau is a scalar between 0 and 1,and average_width is a positive scalar.
 #'
+#' @details The residuals of the calibration set are divided component-wise by
+#'   the modulation function s (computed on the training set) and summarised by
+#'   the chosen score: the max norm ("max"), the Euclidean norm ("l2") or the
+#'   Mahalanobis norm with respect to the covariance matrix of the scaled
+#'   training residuals ("mahalanobis"). k_s is the empirical quantile of the
+#'   calibration scores. The prediction region is the set of y whose score does
+#'   not exceed k_s; lo and up are the bounds of its smallest axis-aligned
+#'   bounding box, i.e. pred -/+ k_s*s for "max" and "l2", and
+#'   pred -/+ k_s*s*sqrt(diag(Sigma)) for "mahalanobis".
 #' @details If the two mad functions are provided they take precedence over the s_type parameter,
 #' and they force a local scoring via the mad function predicted values.
 #'
@@ -65,7 +74,7 @@
 #' @seealso \code{\link{conformal.multidim.full}}
 #'
 #' @references The s_regression and the "max" score are taken from "Conformal Prediction Bands
-#' for Multivariate Functional Data" by Diquigiovanni, Fontana, Vantini (2021).
+#' for Multivariate Functional Data" by Diquigiovanni, Fontana, Vantini (2022).
 #'
 #' @example inst/examples/ex.split.R
 #' @export conformal.multidim.split
@@ -82,18 +91,21 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
   ## Check Data and Splits
   check.split(x=x,y=y,x0=x0,train.fun=train.fun,
               predict.fun=predict.fun, alpha=alpha, seed=seed, training_size
-              =training_size, seed.tau=seed.tau, randomized=randomized,
+              =training_size, seed.tau=seed_tau, randomized=randomized,
               mad.train.fun = mad.train.fun, mad.predict.fun = mad.predict.fun, score = score)
 
+  x=as.matrix(x)
+  y=as.matrix(y)
+  x0=as.matrix(x0)
   n=dim(x)[1]
   p=dim(x)[2]
   q=dim(y)[2]
   n0=nrow(x0)
   flag = FALSE #in general mad funs are not present
 
-  # If mad funs exist, they take precedence
+  # If mad funs exist, they take precedence over the modulation function
   if(is.function(mad.train.fun) && is.function(mad.predict.fun)){
-    score = "identity"
+    s_type = "identity"
     flag = TRUE
   }
 
@@ -112,8 +124,6 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
     else
       m=ceiling(n*training_size)-1
 
-    l=n-m
-
     if(seed!=FALSE){set.seed(seed)}
 
     training=sample(1:n,m)
@@ -125,6 +135,7 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
   }
 
   calibration=setdiff(1:n,training)
+  l=length(calibration)
 
   if(randomized==FALSE) {tau=1} else{
     if(seed_tau!=FALSE){set.seed(seed_tau)}
@@ -140,9 +151,9 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
   }
 
 
-  out = train.fun(x[training,],y[training,])
-  fit = predict.fun(out,x)
-  pred = predict.fun(out,x0)
+  out = train.fun(x[training,,drop=FALSE],y[training,,drop=FALSE])
+  fit = matrix(predict.fun(out,x),nrow=n)
+  pred = matrix(predict.fun(out,x0),nrow=n0)
 
   if (verbose) {
     cat(sprintf("%sComputing residuals and quantiles on second part ...\n",txt))
@@ -150,33 +161,48 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
 
 
   res = y - fit
-  s=computing_s_regression(mat_residual=res[training,],type=s_type,
+  s=computing_s_regression(mat_residual=res[training,,drop=FALSE],type=s_type,
                                  alpha=alpha,tau=tau)
-  resc = t(t(res[calibration,] )/ s)
 
+  # Scale of each residual: the modulation function s, or the local scale
+  # predicted by the mad functions (trained on the training set only)
   if(flag){ # with mad
-    mad.out = mad.train.fun(x[training,],res[training,])
-    resc = resc / mad.predict.fun(mad,out,x[calibration,])
-    mad.x0 = mad.predict.fun(mad.out,x0)
+    mad.out = mad.train.fun(x[training,,drop=FALSE],abs(res[training,,drop=FALSE]))
+    scale.train = matrix(mad.predict.fun(mad.out,x[training,,drop=FALSE]),ncol=q)
+    scale.cal = matrix(mad.predict.fun(mad.out,x[calibration,,drop=FALSE]),ncol=q)
+    scale.x0 = matrix(mad.predict.fun(mad.out,x0),ncol=q)
+  } else {
+    scale.train = matrix(s,nrow=length(training),ncol=q,byrow=TRUE)
+    scale.cal = matrix(s,nrow=l,ncol=q,byrow=TRUE)
+    scale.x0 = matrix(s,nrow=n0,ncol=q,byrow=TRUE)
   }
 
-  switch(score,
-          "max"={rho=apply(resc,1,function(x) max(abs(x)))},
-           "l2" = {rho=rowSums(resc^2)},
-           "mahalanobis" = {rho = mahalanobis(resc,colMeans(resc),cov(resc),tol=1e-2)}
-           )
+  resc = res[calibration,,drop=FALSE] / scale.cal
+
+  # The covariance matrix of the Mahalanobis score is estimated on the
+  # training set, so that the score function does not depend on the
+  # calibration data
+  if(score=="mahalanobis"){
+    sigma = stats::cov(res[training,,drop=FALSE] / scale.train)
+    rho = sqrt(mahalanobis(resc,rep(0,q),sigma,tol=1e-12))
+  } else if(score=="max"){
+    rho = apply(abs(resc),1,max)
+  } else { # "l2"
+    rho = sqrt(rowSums(resc^2))
+  }
 
 
   k_s=sort(rho,decreasing=FALSE)[ceiling(l+tau-(l+1)*alpha)]
-  average_width = mean(2*k_s*s)
 
-  if(flag)
-    band = mad.x0 * k_s
+  # Half-widths of the bounding box of {y : score(y) <= k_s}
+  if(score=="mahalanobis")
+    band = k_s * scale.x0 * matrix(sqrt(diag(sigma)),nrow=n0,ncol=q,byrow=TRUE)
   else
-    band=k_s*matrix(rep(s,n0),nrow = n0,byrow = TRUE)
+    band = k_s * scale.x0
 
   up=pred+band
   lo=pred-band
+  average_width = mean(up-lo)
 
 
   return(structure(.Data=list(x0,pred,k_s,s_type,s,alpha,randomized,tau,
@@ -187,4 +213,4 @@ conformal.multidim.split = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
 
 }
 
-utils::globalVariables(c("pval", "seed.tau"))
+utils::globalVariables(c("pval"))

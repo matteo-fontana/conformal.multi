@@ -39,8 +39,13 @@
 #'   means that no local scaling is done for the conformal score, i.e., the
 #'   usual (unscaled) conformal score is used.
 #' @param score Method to compute nonconformity measure in the multivariate regime.
-#' The user can choose between squared l^2 norm of the residual,
-#' mahalanobis depth of the residual, the max norm of the residual, or a scaled max
+#' The user can choose between the l^2 norm of the residual ("l2", default),
+#' the Mahalanobis distance of the residual ("mahalanobis") and the max norm of
+#' the residual ("max").
+#' @param s_type The type of modulation function applied to the residuals before
+#'   computing the score: "st-dev" (default), where each component is divided by
+#'   its standard deviation, or "identity" (no scaling). The modulation is
+#'   computed on the augmented data set, at each trial value.
 #' @param num.grid.pts.dim Number of grid points per dimension used when forming the conformal
 #'   intervals (each num.grid.pts.dim^q points is a trial point). Default is
 #'   100.
@@ -81,9 +86,13 @@
 
 conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,mad.train.fun = NULL,
                                 mad.predict.fun = NULL,
-                                score=c('l2','mahalanobis','max',"scaled.max"),
+                                score=c('l2','mahalanobis','max'),
+                                s_type=c("st-dev","identity"),
                                 num.grid.pts.dim=100, grid.factor=1.25,
                                 verbose=FALSE) {
+
+  score = match.arg(score)
+  s_type = match.arg(s_type)
 
   # Set up data
   x = as.matrix(x)
@@ -127,7 +136,8 @@ conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,
   xx = rbind(x,rep(0,p))
 
 
-  future::plan(future::multisession)
+  oplan = future::plan(future::multisession)
+  on.exit(future::plan(oplan), add = TRUE)
   options(future.rng.onMisuse="ignore")
 
 
@@ -152,18 +162,21 @@ conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,
 
       r = yy - matrix(predict.fun(out,xx),nrow=n+1)
       if (!is.null(mad.train.fun) && !is.null(mad.predict.fun)) {
-          if (j==1)
-            out.mad = mad.train.fun(xx,r)
-          else
-            out.mad = mad.train.fun(xx,r,out.mad)
-            r = r / mad.predict.fun(out.mad,xx)
-        }
+        if (j==1)
+          out.mad = mad.train.fun(xx,abs(r))
+        else
+          out.mad = mad.train.fun(xx,abs(r),out.mad)
+        r = r / matrix(mad.predict.fun(out.mad,xx),nrow=n+1)
+      } else {
+        s = computing_s_regression(mat_residual=r,type=s_type,
+                                   alpha=alpha,tau=1)
+        r = t(t(r)/s)
+      }
 
       switch(score,
            "l2"={ncm=rowSums(r^2)},
            "mahalanobis"={ncm=mahalanobis(r,colMeans(r),cov(r))},
-           "max"={ncm=apply(abs(r), 1, max)},
-           "scaled.max"={r=r/apply(r,2,var);ncm=apply(abs(r),1,max)},
+           "max"={ncm=apply(abs(r), 1, max)}
       )
 
       return(sum(ncm>=ncm[n+1])/(n+1))
@@ -173,10 +186,6 @@ conformal.multidim.full = function(x, y, x0, train.fun, predict.fun,alpha = 0.1,
     valid_points[[k]] = data.frame(pval_matrix[which(pvals > alpha),])
   }
 
-
-  ## To avoid CRAN check errors
-  ## R CMD check: make sure any open connections are closed afterward
-  future::plan(future::sequential)
 
   return(list(valid_points = valid_points,pred = data.frame(pred)))
 }

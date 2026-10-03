@@ -1,30 +1,45 @@
-#' Plot Confidence Regions obtained with Split Conformal
+#' Plot Prediction Regions for a Multivariate Response
 #'
-#' Generate plots for the confidence regions produced by a split multivariate conformal
-#' prediction function.
+#' Generate plots for the prediction regions produced by the multivariate
+#' conformal prediction functions.
 #'
-#' @param split Output of a split multivariate conformal prediction function.
+#' @param split Output of \code{\link{conformal.multidim.split}},
+#'   \code{\link{conformal.multidim.msplit}},
+#'   \code{\link{conformal.multidim.jackplus}} or
+#'   \code{\link{conformal.multidim.full}}.
 #' @param same.scale Logical. Should all plots use the same y-axis scale? Default is FALSE.
 #'
-#' @return A list of \code{ggplot} objects, one for each observation (n0 = length(x0)).
+#' @return For the output of the split, multi split and jackknife+ functions,
+#'   a list (of length p) of lists (of length q) of \code{ggplot} objects: the
+#'   plot in position [[i]][[j]] displays the prediction interval of the j-th
+#'   component of the response against the i-th covariate, at each test point.
+#'   The plots are also drawn on a grid. For the output of
+#'   \code{\link{conformal.multidim.full}}, the output of
+#'   \code{\link{plot_multidim_full}}.
 #'
 #' @details This function uses the \code{\link[ggplot2]{ggplot2}} and
-#'   \code{\link[gridExtra]{gridExtra}} packages for visualization.
+#'   \code{\link[gridExtra]{gridExtra}} packages for visualization. When the
+#'   input does not contain point predictions (multi split and jackknife+), the
+#'   midpoint of each interval is displayed.
 #'
 #' @example inst/examples/ex.split.R
 #' @export plot_multidim
 
 
 
-
 plot_multidim=function(split, same.scale = FALSE){
 
+  if(!is.null(split$valid_points))
+    return(plot_multidim_full(split))
 
   #Get Data
-  x0 = split$x0
-  lo = split$lo
-  up = split$up
+  x0 = as.matrix(split$x0)
+  lo = as.matrix(split$lo)
+  up = as.matrix(split$up)
   pred = split$pred
+  if(is.null(pred))
+    pred = (lo+up)/2
+  pred = as.matrix(pred)
 
   # Find bounds for the plots
 
@@ -38,7 +53,6 @@ plot_multidim=function(split, same.scale = FALSE){
   # Define dimensions
   p<-ncol(x0)
   q<-ncol(lo)
-  g_list<-vector("list",p*q)
 
 
 
@@ -50,7 +64,7 @@ plot_multidim=function(split, same.scale = FALSE){
 
 
     if(same.scale)
-      ggg = ggg + ggplot2::ylim(y_up,y_lo)
+      ggg = ggg + ggplot2::ylim(y_lo,y_up)
 
     return(ggg)
 
@@ -59,10 +73,9 @@ plot_multidim=function(split, same.scale = FALSE){
 
 
   glist <- do.call(c, gl)
-  do.call(gridExtra::"grid.arrange", c(glist, ncol=q,top="Confidence Intervals"))
+  do.call(gridExtra::"grid.arrange", c(glist, ncol=q,top="Prediction Intervals"))
   return(gl)
 
 }
 
 utils::globalVariables(c( "xd", "y_max", "y_min", "yg"))
-

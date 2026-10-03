@@ -16,6 +16,9 @@ This model can be used with conformal prediction functions.
 It returns a training function and a prediction function.
 }
 \details{
+If the design matrix is rank deficient, the coefficients of the aliased
+columns are set to zero (as in \code{\link[stats]{predict.lm}}).
+
 The training function takes as input:
 \describe{
   \item{x}{Feature matrix of dimension n x p.}

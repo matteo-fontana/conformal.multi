@@ -72,7 +72,7 @@ i.e., to produce an estimator of E(R|X) where R is the absolute residual
 R = |Y - m(X)|, and m denotes the estimator produced by train.fun.
 This is used to scale the conformal score, to produce a prediction interval
 with varying local width. The input arguments to mad.train.fun should be
-x: matrix of features, y: vector of absolute residuals, and out: the output
+x: matrix of features, y: matrix of absolute residuals, and out: the output
 produced by a previous call to mad.train.fun, at the \emph{same} features
 x. The function mad.train.fun may (optionally) leverage this returned
 output for efficiency purposes. See details below. The default for
@@ -99,6 +99,16 @@ Compute prediction intervals using split conformal inference with multivariate
 response.
 }
 \details{
+The residuals of the calibration set are divided component-wise by
+  the modulation function s (computed on the training set) and summarised by
+  the chosen score: the max norm ("max"), the Euclidean norm ("l2") or the
+  Mahalanobis norm with respect to the covariance matrix of the scaled
+  training residuals ("mahalanobis"). k_s is the empirical quantile of the
+  calibration scores. The prediction region is the set of y whose score does
+  not exceed k_s; lo and up are the bounds of its smallest axis-aligned
+  bounding box, i.e. pred -/+ k_s*s for "max" and "l2", and
+  pred -/+ k_s*s*sqrt(diag(Sigma)) for "mahalanobis".
+
 If the two mad functions are provided they take precedence over the s_type parameter,
 and they force a local scoring via the mad function predicted values.
 }
@@ -133,7 +143,7 @@ ppp2<-plot_multidim(final.point)
 }
 \references{
 The s_regression and the "max" score are taken from "Conformal Prediction Bands
-for Multivariate Functional Data" by Diquigiovanni, Fontana, Vantini (2021).
+for Multivariate Functional Data" by Diquigiovanni, Fontana, Vantini (2022).
 }
 \seealso{
 \code{\link{conformal.multidim.full}}

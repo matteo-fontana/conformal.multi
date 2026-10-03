@@ -2,25 +2,36 @@
 % Please edit documentation in R/plot.split.R
 \name{plot_multidim}
 \alias{plot_multidim}
-\title{Plot Confidence Regions obtained with Split Conformal}
+\title{Plot Prediction Regions for a Multivariate Response}
 \usage{
 plot_multidim(split, same.scale = FALSE)
 }
 \arguments{
-\item{split}{Output of a split multivariate conformal prediction function.}
+\item{split}{Output of \code{\link{conformal.multidim.split}},
+\code{\link{conformal.multidim.msplit}},
+\code{\link{conformal.multidim.jackplus}} or
+\code{\link{conformal.multidim.full}}.}
 
 \item{same.scale}{Logical. Should all plots use the same y-axis scale? Default is FALSE.}
 }
 \value{
-A list of \code{ggplot} objects, one for each observation (n0 = length(x0)).
+For the output of the split, multi split and jackknife+ functions,
+  a list (of length p) of lists (of length q) of \code{ggplot} objects: the
+  plot in position [[i]][[j]] displays the prediction interval of the j-th
+  component of the response against the i-th covariate, at each test point.
+  The plots are also drawn on a grid. For the output of
+  \code{\link{conformal.multidim.full}}, the output of
+  \code{\link{plot_multidim_full}}.
 }
 \description{
-Generate plots for the confidence regions produced by a split multivariate conformal
-prediction function.
+Generate plots for the prediction regions produced by the multivariate
+conformal prediction functions.
 }
 \details{
 This function uses the \code{\link[ggplot2]{ggplot2}} and
-  \code{\link[gridExtra]{gridExtra}} packages for visualization.
+  \code{\link[gridExtra]{gridExtra}} packages for visualization. When the
+  input does not contain point predictions (multi split and jackknife+), the
+  midpoint of each interval is displayed.
 }
 \examples{
 

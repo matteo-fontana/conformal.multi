@@ -8,6 +8,9 @@
 #' \item{predict.fun}{Function to make predictions on new data.}
 #'
 #' @details
+#' If the design matrix is rank deficient, the coefficients of the aliased
+#' columns are set to zero (as in \code{\link[stats]{predict.lm}}).
+#'
 #' The training function takes as input:
 #' \describe{
 #'   \item{x}{Feature matrix of dimension n x p.}
@@ -39,6 +42,11 @@ lm_multi = function() {
 
     coeff=vapply(1:q, function(i) lm(formula = y[,i] ~  x)$coefficients,numeric(p+1))
     # dim (p+1) x q
+
+    # Coefficients of aliased columns are NA when the design matrix is rank
+    # deficient (e.g. a covariate that is constant on the training set):
+    # they are set to zero, as done by predict.lm
+    coeff[is.na(coeff)]=0
 
     return(list(coeff=coeff))
 

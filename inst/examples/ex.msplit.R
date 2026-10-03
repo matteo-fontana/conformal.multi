@@ -21,3 +21,7 @@ final.multi=conformal.multidim.msplit(x=x,y=y, x0=x0,
 
 
 
+
+final.depth=conformal.multidim.msplit(x=x,y=y, x0=x0,
+                                      fun$train.fun, fun$predict.fun,
+                                      alpha=0.1, B=B, aggregation="depth")
