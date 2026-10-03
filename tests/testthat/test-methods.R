@@ -187,3 +187,16 @@ test_that("jackknife+ with method = 'max' equals the jackknife+ interval for q =
   expect_error(conformal.multidim.jackplus(d$x, d$y, d$x0, fun$train.fun,
                                            fun$predict.fun, method = "max", scale = 1))
 })
+
+test_that("the prediction functions do not change the kind of random number generator", {
+  d = make_data()
+  fun = lm_multi()
+  kind = RNGkind()
+  conformal.multidim.jackplus(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun)
+  expect_identical(RNGkind(), kind)
+  conformal.multidim.msplit(d$x, d$y, d$x0, fun$train.fun, fun$predict.fun, B = 4, seed = 1)
+  expect_identical(RNGkind(), kind)
+  conformal.multidim.full(d$x, d$y, d$x0[1, , drop = FALSE], fun$train.fun,
+                          fun$predict.fun, num.grid.pts.dim = 5)
+  expect_identical(RNGkind(), kind)
+})

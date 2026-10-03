@@ -44,7 +44,8 @@
   `seed + b` as before; `seed = 0` reproduces the default of version 1.1.2.
 * The prediction functions no longer change the option
   `future.rng.onMisuse`, and use parallel-safe random numbers
-  (`future.seed = TRUE`).
+  (`future.seed = TRUE`); the kind of random number generator of the session
+  is restored on exit.
 * `conformal.multidim.split()` and `conformal.multidim.jackplus()` pass `x`
   and `x0` to `train.fun` and `predict.fun` as they are given (matrices or
   data frames), and accept predictions returned as data frames.

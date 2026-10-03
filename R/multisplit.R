@@ -112,6 +112,10 @@ conformal.multidim.msplit = function(x,y, x0, train.fun, predict.fun, alpha=0.1,
 
   oplan = future::plan(future::multisession)
   on.exit(future::plan(oplan), add = TRUE)
+  # future.seed = TRUE may change the kind of random number generator of the
+  # session: restore it on exit
+  okind = RNGkind()
+  on.exit(restore.rngkind(okind), add = TRUE)
 
 
   lo_up <- t(future.apply::future_sapply(1:B, function(bbb) {

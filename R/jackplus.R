@@ -75,6 +75,10 @@ conformal.multidim.jackplus = function(x,y,x0, train.fun, predict.fun, alpha=0.1
   ### Parallel sessions
   oplan = future::plan(future::multisession)
   on.exit(future::plan(oplan), add = TRUE)
+  # future.seed = TRUE may change the kind of random number generator of the
+  # session: restore it on exit
+  okind = RNGkind()
+  on.exit(restore.rngkind(okind), add = TRUE)
 
   ## Fit the n leave-one-out models; each worker returns the absolute LOO
   ## residual of the left-out observation and the predictions at x0
@@ -156,4 +160,16 @@ depth.max=function(inp){
   d=-apply(abs(z),1,max)
   d[is.na(d)]=-Inf
   return(d)
+}
+
+
+#' Restore the kind of random number generator
+#'
+#' @param okind Output of RNGkind() saved before the computation.
+#' @noRd
+
+restore.rngkind=function(okind){
+  if(!identical(RNGkind(), okind))
+    RNGkind(okind[1], okind[2], okind[3])
+  invisible(NULL)
 }
